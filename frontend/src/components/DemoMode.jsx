@@ -22,10 +22,34 @@ export default function DemoMode({ onNew }) {
   const [reportsSent, setReportsSent] = useState(0);
   const intervalRef = useRef(null);
 
+  // Keep active simulated targets so reports group up and trigger DBSCAN
+  const activeTargets = useRef([]);
+
   function sendRandomReport() {
-    const spot = HOTSPOTS[Math.floor(Math.random() * HOTSPOTS.length)];
-    const lat = spot.lat + (Math.random() - 0.5) * 0.005;
-    const lng = spot.lng + (Math.random() - 0.5) * 0.005;
+    if (activeTargets.current.length < 3) {
+      // Pick a random hot spot and generate a new random target local center
+      const spot = HOTSPOTS[Math.floor(Math.random() * HOTSPOTS.length)];
+      activeTargets.current.push({
+        name: spot.name,
+        lat: spot.lat + (Math.random() - 0.5) * 0.005,
+        lng: spot.lng + (Math.random() - 0.5) * 0.005,
+        reportsLeft: Math.floor(Math.random() * 3) + 3 // 3 to 5 reports total
+      });
+    }
+
+    // Pick one of the active targets to report against
+    const targetIdx = Math.floor(Math.random() * activeTargets.current.length);
+    const target = activeTargets.current[targetIdx];
+
+    // Create a point very close to the active target (< 3 meters)
+    const lat = target.lat + (Math.random() - 0.5) * 0.00004;
+    const lng = target.lng + (Math.random() - 0.5) * 0.00004;
+
+    target.reportsLeft -= 1;
+    if (target.reportsLeft <= 0) {
+      // Remove exhausted target
+      activeTargets.current.splice(targetIdx, 1);
+    }
 
     const data = {
       lat,
@@ -41,7 +65,7 @@ export default function DemoMode({ onNew }) {
         if (result.pothole_confirmed) {
           onNew?.({
             severity: result.severity,
-            ward: spot.name,
+            ward: target.name,
             pothole_id: result.pothole_id,
           });
         }
