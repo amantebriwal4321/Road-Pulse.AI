@@ -3,6 +3,8 @@ import { GlassCard } from "@/components/GlassCard";
 import { HUDLabel } from "@/components/HUDLabel";
 import { NeonButton } from "@/components/NeonButton";
 import { ScanningLine } from "@/components/ScanningLine";
+import { LiveMap } from "@/components/LiveMap";
+import { usePotholes } from "@/hooks/usePotholes";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,6 +24,7 @@ const cities = ['Bengaluru', 'Mumbai', 'Delhi', 'Chennai', 'Hyderabad', 'Pune', 
 
 const CitizenOnboarding = () => {
   const navigate = useNavigate();
+  const { potholes } = usePotholes(10000);
   const [step, setStep] = useState(1);
   const [vehicleType, setVehicleType] = useState('');
   const [phoneTier, setPhoneTier] = useState('mid-range');
@@ -165,15 +168,24 @@ const CitizenOnboarding = () => {
               
               <div className="space-y-4 mb-6">
                 <div className="glass-card p-4">
-                  <p className="text-text-secondary text-sm mb-2">Home Area</p>
-                  <div className="w-full h-32 bg-surface rounded-lg flex items-center justify-center border border-border-glow">
-                    <span className="text-text-secondary text-xs font-mono">MAP · SET MAPBOX TOKEN TO ENABLE</span>
+                  <div className="flex justify-between items-end mb-2">
+                    <p className="text-text-secondary text-sm">Home Area</p>
+                    <p className="text-text-secondary text-[10px] font-mono">SILK BOARD</p>
+                  </div>
+                  <div className="w-full h-32 bg-surface rounded-lg flex items-center justify-center border border-border-glow overflow-hidden relative">
+                    {/* Overlay to disable scroll-zooming accidentally during onboarding */}
+                    <div className="absolute inset-0 pointer-events-none z-10 box-border border-2 border-transparent hover:border-cyan transition-colors" />
+                    <LiveMap potholes={potholes} height="100%" center={[12.9165, 77.6229]} zoom={13} showPopups={false} />
                   </div>
                 </div>
                 <div className="glass-card p-4">
-                  <p className="text-text-secondary text-sm mb-2">Work Area</p>
-                  <div className="w-full h-32 bg-surface rounded-lg flex items-center justify-center border border-border-glow">
-                    <span className="text-text-secondary text-xs font-mono">MAP · SET MAPBOX TOKEN TO ENABLE</span>
+                  <div className="flex justify-between items-end mb-2">
+                    <p className="text-text-secondary text-sm">Work Area</p>
+                    <p className="text-text-secondary text-[10px] font-mono">MANYATA TECH PARK</p>
+                  </div>
+                  <div className="w-full h-32 bg-surface rounded-lg flex items-center justify-center border border-border-glow overflow-hidden relative">
+                    <div className="absolute inset-0 pointer-events-none z-10 box-border border-2 border-transparent hover:border-cyan transition-colors" />
+                    <LiveMap potholes={potholes} height="100%" center={[13.0450, 77.6210]} zoom={13} showPopups={false} />
                   </div>
                 </div>
               </div>
