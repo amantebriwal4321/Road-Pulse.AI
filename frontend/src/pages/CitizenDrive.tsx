@@ -1,37 +1,14 @@
-/**
- * CitizenDrive — Route Planner + AI Chatbot Interface
- *
- * Layout: Full-screen split view
- *   [LEFT / TOP on mobile]  → Live Leaflet map with pothole markers
- *   [RIGHT / BOTTOM sidebar] → AI Route Chatbot
- *
- * ── AI_CHATBOT_INTEGRATION POINT ──────────────────────────────
- * When your AI chatbot is ready, plug it into the `handleSendMessage`
- * function below. It receives the user's message string and should:
- *   1. Call your AI route API
- *   2. Return a text response (shown as a chat bubble)
- *   3. Optionally return route polyline coords → pass to setRoutePolyline()
- *      to draw the route on the map
- * ──────────────────────────────────────────────────────────────
- */
-
 import { useState, useRef, useEffect } from 'react';
 import { LiveMap }       from '@/components/LiveMap';
 import { usePotholes }   from '@/hooks/usePotholes';
 import { useNavigate }   from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Send, Bot, User, MapPin, Navigation,
+  Send, Bot, bg, User, MapPin, Navigation,
   LayoutGrid, Map, ChevronDown, ChevronUp,
   Sparkles, X,
 } from 'lucide-react';
-
-// ─── Types ───────────────────────────────────────────────────────
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  text: string;
-  timestamp: Date;
-}
+import { Chatbot } from '@/components/Chatbot';
 
 // ─── Bottom Nav ──────────────────────────────────────────────────
 const BottomNav = ({ active }: { active: string }) => {
@@ -68,107 +45,11 @@ const BottomNav = ({ active }: { active: string }) => {
   );
 };
 
-// ─── Typing indicator dots ────────────────────────────────────────
-const TypingDots = () => (
-  <div style={{ display: 'flex', gap: 4, padding: '4px 0' }}>
-    {[0, 1, 2].map((i) => (
-      <div key={i} style={{
-        width: 6, height: 6, borderRadius: '50%', background: '#2563eb',
-        animation: `typingBounce 1.2s ${i * 0.2}s ease-in-out infinite`,
-      }} />
-    ))}
-  </div>
-);
 
 // ─── Main Component ───────────────────────────────────────────────
 const CitizenDrive = () => {
-  const { potholes } = usePotholes(10000);
-
-  // ── Chat state ───────────────────────────────────────────────
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      text: "Hi! I'm your RoadPulse AI navigator 🗺️\n\nTell me where you want to go and I'll find the smoothest route — avoiding potholes along the way.\n\nExample: \"From Silk Board to Manyata Tech Park\"",
-      timestamp: new Date(),
-    },
-  ]);
-  const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Auto-scroll chat
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
-
-  // ── AI_CHATBOT_INTEGRATION POINT ─────────────────────────────
-  // Replace this placeholder function with your real AI API call.
-  // Receives: userMessage (string)
-  // Returns:  { reply: string, routePolyline?: [number,number][] }
-  const callAIChatbot = async (userMessage: string): Promise<string> => {
-    // TODO: Replace with your AI chatbot API call
-    // Example:
-    //   const res = await fetch('/api/route-ai', {
-    //     method: 'POST',
-    //     body: JSON.stringify({ message: userMessage, potholes }),
-    //   });
-    //   const data = await res.json();
-    //   return data.reply;
-
-    // Placeholder response (remove when AI is integrated)
-    await new Promise((r) => setTimeout(r, 1200));
-    if (userMessage.toLowerCase().includes('silk board') || userMessage.toLowerCase().includes('marathahalli')) {
-      return "I found 2 routes for you:\n\n🟢 **Smoothest Route** — Via Outer Ring Road (14.1 km · 34 min)\n   Road score: 9.1/10 · Only 3 potholes\n\n🟠 **Fastest Route** — Via Hosur Road (12.4 km · 28 min)\n   Road score: 6.2/10 · 14 potholes detected\n\n**Recommendation:** Take the Outer Ring Road route. You'll save significant suspension wear.\n\n_Pothole data powered by RoadPulse Digital Twin_";
-    }
-    return "Sure! Please tell me your **starting point** and **destination** in Bengaluru and I'll calculate the best pothole-avoiding route for you.";
-  };
-  // ── END AI_CHATBOT_INTEGRATION POINT ─────────────────────────
-
-  const handleSend = async () => {
-    const trimmed = input.trim();
-    if (!trimmed) return;
-
-    // Add user message
-    const userMsg: ChatMessage = { role: 'user', text: trimmed, timestamp: new Date() };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput('');
-    setIsTyping(true);
-
-    try {
-      const reply = await callAIChatbot(trimmed);
-      setMessages((prev) => [...prev, {
-        role: 'assistant',
-        text: reply,
-        timestamp: new Date(),
-      }]);
-    } catch {
-      setMessages((prev) => [...prev, {
-        role: 'assistant',
-        text: 'Sorry, I had trouble connecting. Please try again.',
-        timestamp: new Date(),
-      }]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-  };
-
-  // Simple markdown-ish bold renderer
-  const renderText = (text: string) => {
-    const parts = text.split(/(\*\*[^*]+\*\*)/g);
-    return parts.map((part, i) =>
-      part.startsWith('**') && part.endsWith('**')
-        ? <strong key={i}>{part.slice(2, -2)}</strong>
-        : part.split('\n').map((line, j, arr) => (
-          <span key={j}>{line}{j < arr.length - 1 && <br />}</span>
-        ))
-    );
-  };
+  const { data: potholes = [] } = usePotholes(10000);
+  const [routeData, setRouteData] = useState<any | null>(null);
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#f1f5f9', display: 'flex', flexDirection: 'column' }}>
@@ -195,18 +76,6 @@ const CitizenDrive = () => {
             {potholes.length} HAZARDS MAPPED
           </span>
         </div>
-        {/* Toggle sidebar on mobile */}
-        <button
-          onClick={() => setSidebarOpen(v => !v)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            background: 'none', border: '1px solid rgba(0,0,0,0.1)',
-            borderRadius: 8, padding: '4px 10px', cursor: 'pointer',
-          }}>
-          <Bot size={14} color="#2563eb" />
-          <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#374151' }}>AI Route</span>
-          {sidebarOpen ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
-        </button>
       </div>
 
       {/* ── Main split layout ─────────────────────────────────── */}
@@ -224,6 +93,7 @@ const CitizenDrive = () => {
             center={[12.9352, 77.5551]}
             zoom={13}
             showPopups={true}
+            routeData={routeData}
           />
 
           {/* Map legend overlay */}
@@ -247,231 +117,14 @@ const CitizenDrive = () => {
               </div>
             ))}
           </div>
-
-          {/* Route will be drawn here by AI */}
-          {/* AI_CHATBOT_INTEGRATION: render Polyline component here with routePolyline state */}
         </div>
 
         {/* ── CHATBOT SIDEBAR ──────────────────────────────────── */}
-        <AnimatePresence>
-          {sidebarOpen && (
-            <motion.div
-              initial={{ x: '100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: '100%', opacity: 0 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              style={{
-                width: 340, flexShrink: 0,
-                background: '#ffffff',
-                borderLeft: '1px solid rgba(0,0,0,0.08)',
-                display: 'flex', flexDirection: 'column',
-                boxShadow: '-4px 0 24px rgba(0,0,0,0.06)',
-                position: 'relative',
-              }}
-            >
-              {/* Sidebar header */}
-              <div style={{
-                padding: '14px 16px', borderBottom: '1px solid rgba(0,0,0,0.06)',
-                display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
-              }}>
-                <div style={{
-                  width: 34, height: 34, borderRadius: 10,
-                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(37,99,235,0.35)',
-                }}>
-                  <Sparkles size={16} color="white" />
-                </div>
-                <div>
-                  <p style={{ fontWeight: 700, fontSize: 14, color: '#111827', margin: 0 }}>
-                    AI Route Navigator
-                  </p>
-                  <p style={{ fontSize: 10, color: '#6b7280', fontFamily: 'monospace', margin: 0 }}>
-                    RoadPulse Twin · Pothole-aware routing
-                  </p>
-                </div>
-                <button onClick={() => setSidebarOpen(false)}
-                  style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-                  <X size={16} color="#9ca3af" />
-                </button>
-              </div>
-
-              {/* From / To quick inputs */}
-              <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(0,0,0,0.05)', flexShrink: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <MapPin size={14} color="#2563eb" />
-                  <input
-                    placeholder="From — e.g. Silk Board"
-                    style={{
-                      flex: 1, padding: '7px 10px', borderRadius: 8, fontSize: 12,
-                      border: '1px solid rgba(0,0,0,0.1)', outline: 'none',
-                      fontFamily: 'inherit', color: '#111827', background: '#f9fafb',
-                    }}
-                    onFocus={(e) => e.target.style.border = '1px solid rgba(37,99,235,0.5)'}
-                    onBlur={(e) => e.target.style.border = '1px solid rgba(0,0,0,0.1)'}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        const fromVal = (e.target as HTMLInputElement).value;
-                        const toEl = (e.target as HTMLElement).closest('div')?.nextElementSibling?.querySelector('input');
-                        if (toEl && fromVal) {
-                          const toVal = (toEl as HTMLInputElement).value;
-                          if (toVal) setInput(`From ${fromVal} to ${toVal}`);
-                        }
-                      }
-                    }}
-                  />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Navigation size={14} color="#6b7280" />
-                  <input
-                    placeholder="To — e.g. Manyata Tech Park"
-                    style={{
-                      flex: 1, padding: '7px 10px', borderRadius: 8, fontSize: 12,
-                      border: '1px solid rgba(0,0,0,0.1)', outline: 'none',
-                      fontFamily: 'inherit', color: '#111827', background: '#f9fafb',
-                    }}
-                    onFocus={(e) => e.target.style.border = '1px solid rgba(37,99,235,0.5)'}
-                    onBlur={(e) => e.target.style.border = '1px solid rgba(0,0,0,0.1)'}
-                  />
-                </div>
-                <button
-                  onClick={() => {
-                    const inputs = document.querySelectorAll<HTMLInputElement>('.drive-route-input');
-                    const from = inputs[0]?.value?.trim();
-                    const to = inputs[1]?.value?.trim();
-                    if (from && to) {
-                      setInput(`From ${from} to ${to}`);
-                      setTimeout(() => handleSend(), 50);
-                    }
-                  }}
-                  style={{
-                    marginTop: 8, width: '100%', padding: '8px', borderRadius: 8,
-                    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                    color: 'white', border: 'none', cursor: 'pointer',
-                    fontWeight: 700, fontSize: 12, fontFamily: 'monospace',
-                    boxShadow: '0 2px 8px rgba(37,99,235,0.3)',
-                  }}>
-                  FIND BEST ROUTE →
-                </button>
-              </div>
-
-              {/* Chat messages */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px' }}>
-                {messages.map((msg, idx) => (
-                  <div key={idx} style={{
-                    marginBottom: 12,
-                    display: 'flex',
-                    flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                    alignItems: 'flex-start', gap: 8,
-                  }}>
-                    {/* Avatar */}
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                      background: msg.role === 'assistant'
-                        ? 'linear-gradient(135deg, #2563eb, #1d4ed8)'
-                        : 'linear-gradient(135deg, #6b7280, #4b5563)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {msg.role === 'assistant'
-                        ? <Bot size={14} color="white" />
-                        : <User size={14} color="white" />}
-                    </div>
-
-                    {/* Bubble */}
-                    <div style={{
-                      maxWidth: '80%',
-                      background: msg.role === 'assistant' ? '#f0f4ff' : '#2563eb',
-                      color: msg.role === 'assistant' ? '#111827' : 'white',
-                      padding: '10px 12px', borderRadius: msg.role === 'assistant'
-                        ? '4px 14px 14px 14px' : '14px 4px 14px 14px',
-                      fontSize: 13, lineHeight: 1.55,
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                    }}>
-                      {renderText(msg.text)}
-                      <p style={{ fontSize: 9, opacity: 0.5, marginTop: 4, fontFamily: 'monospace',
-                        textAlign: msg.role === 'user' ? 'right' : 'left' }}>
-                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Typing indicator */}
-                {isTyping && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      <Bot size={14} color="white" />
-                    </div>
-                    <div style={{
-                      background: '#f0f4ff', padding: '10px 14px', borderRadius: '4px 14px 14px 14px',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                    }}>
-                      <TypingDots />
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Chat input */}
-              <div style={{
-                padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)',
-                flexShrink: 0, paddingBottom: 80,
-              }}>
-                <div style={{
-                  display: 'flex', gap: 8, alignItems: 'center',
-                  background: '#f9fafb', borderRadius: 12,
-                  border: '1px solid rgba(0,0,0,0.1)', padding: '6px 6px 6px 12px',
-                }}>
-                  <input
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ask about a route..."
-                    style={{
-                      flex: 1, background: 'none', border: 'none', outline: 'none',
-                      fontSize: 13, color: '#111827', fontFamily: 'inherit',
-                    }}
-                  />
-                  <button
-                    onClick={handleSend}
-                    disabled={!input.trim() || isTyping}
-                    style={{
-                      width: 34, height: 34, borderRadius: 8, border: 'none', cursor: 'pointer',
-                      background: input.trim() && !isTyping
-                        ? 'linear-gradient(135deg, #2563eb, #1d4ed8)'
-                        : '#e5e7eb',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s',
-                      boxShadow: input.trim() && !isTyping ? '0 2px 6px rgba(37,99,235,0.4)' : 'none',
-                    }}>
-                    <Send size={14} color={input.trim() && !isTyping ? 'white' : '#9ca3af'} />
-                  </button>
-                </div>
-                <p style={{ textAlign: 'center', fontSize: 9, color: '#9ca3af', fontFamily: 'monospace', marginTop: 5 }}>
-                  POWERED BY ROADPULSE AI · TWIN DATA v1.0
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <Chatbot onShowRoute={setRouteData} potholes={potholes} />
       </div>
 
       {/* ── Bottom nav ──────────────────────────────────────────── */}
       <BottomNav active="drive" />
-
-      {/* ── Typing animation keyframes ───────────────────────── */}
-      <style>{`
-        @keyframes typingBounce {
-          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-          30%            { transform: translateY(-5px); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 };

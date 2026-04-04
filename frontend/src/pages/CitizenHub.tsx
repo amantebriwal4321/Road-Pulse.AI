@@ -188,31 +188,20 @@ const CitizenHub = () => {
   const [driveMode, setDriveMode] = useState(false);
   const [proximityAlert, setProximityAlert] = useState<string | null>(null);
   const [mapRef, setMapRef] = useState<LeafletMap | null>(null);
+  const [routeData, setRouteData] = useState<any | null>(null);
   const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ── Simulator State ──
-  const [simulating, setSimulating] = useState(false);
-  const [simRoute, setSimRoute] = useState<[number, number][]>([]);
-  const [simIndex, setSimIndex] = useState(0);
-  const [simPotholes, setSimPotholes] = useState<any[]>([]);
 
   // ── Demo fallback: use hardcoded Bengaluru location if GPS is outside city ──
   // This ensures the demo works correctly on any laptop anywhere in India.
   const usingDemoLocation =
     coords !== null && !isBengaluru(coords[0], coords[1]);
-  const baseCoords: [number, number] | null = coords
+  const effectiveCoords: [number, number] | null = coords
     ? isBengaluru(coords[0], coords[1])
       ? coords
       : DEMO_LOCATION
     : null;
 
-  const effectiveCoords: [number, number] | null =
-    simulating && simRoute[simIndex] ? simRoute[simIndex] : baseCoords;
-
-  const combinedPotholes = useMemo(() => {
-    return [...potholes, ...simPotholes];
-  }, [potholes, simPotholes]);
-
+  // ── Advisory text: closest high-severity pothole ─────────────
   const advisoryText = useMemo(() => {
     if (!potholes.length) return "No active alerts nearby";
     const critical = potholes.find((p) => p.severity >= 9);
@@ -224,7 +213,7 @@ const CitizenHub = () => {
 
   // ── Proximity detection ──────────────────────────────────────
   const checkProximity = useCallback(() => {
-    if (!autoDetect || !effectiveCoords || !combinedPotholes.length) return;
+    if (!autoDetect || !effectiveCoords || !potholes.length) return;
     const [uLat, uLng] = effectiveCoords;
     const nearby = potholes
       .filter((p) => distanceMeters(uLat, uLng, p.lat, p.lng) < 300)
@@ -241,13 +230,13 @@ const CitizenHub = () => {
     );
     if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
     alertTimerRef.current = setTimeout(() => setProximityAlert(null), 5000);
-  }, [autoDetect, effectiveCoords, combinedPotholes]);
+  }, [autoDetect, effectiveCoords, potholes]);
 
   useEffect(() => {
-    if (!autoDetect && !simulating) return;
+    if (!autoDetect) return;
     const interval = setInterval(checkProximity, 5000);
     return () => clearInterval(interval);
-  }, [autoDetect, checkProximity, simulating]);
+  }, [autoDetect, checkProximity]);
 
   // ── Centre on user ───────────────────────────────────────────
   const centreOnUser = useCallback(() => {
@@ -269,13 +258,14 @@ const CitizenHub = () => {
         {/* Full-screen dark map in drive mode */}
         <div style={{ position: "absolute", inset: 0 }}>
           <LiveMap
-            potholes={combinedPotholes}
+            potholes={potholes}
             height="100%"
             tileMode="dark"
             userLocation={effectiveCoords}
             center={effectiveCoords ?? [12.9716, 77.5946]}
             zoom={16}
             showPopups={false}
+            routeData={routeData}
             onMapRef={setMapRef}
           />
         </div>
@@ -393,13 +383,14 @@ const CitizenHub = () => {
       {/* ── Full-screen LIGHT map ── */}
       <div style={{ position: "absolute", inset: 0 }}>
         <LiveMap
-          potholes={combinedPotholes}
+          potholes={potholes}
           height="100%"
           tileMode="light"
-          userLocation={autoDetect || simulating ? effectiveCoords : null}
+          userLocation={autoDetect ? effectiveCoords : null}
           center={effectiveCoords ?? [12.9716, 77.5946]}
           zoom={13}
           showPopups={true}
+          routeData={routeData}
           onMapRef={setMapRef}
         />
       </div>
@@ -548,7 +539,7 @@ const CitizenHub = () => {
         {/* Centre on me */}
         <button
           onClick={centreOnUser}
-          disabled={!effectiveCoords}
+          disabled={!coords}
           title="Centre on my location"
           style={{
             width: 44,
