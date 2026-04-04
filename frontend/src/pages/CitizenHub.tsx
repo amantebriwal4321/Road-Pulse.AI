@@ -16,7 +16,6 @@ import {
   AlertTriangle,
   X,
   Locate,
-  Play,
 } from "lucide-react";
 import type { Map as LeafletMap } from "leaflet";
 
@@ -359,8 +358,7 @@ const CitizenHub = () => {
               fontSize: 13,
             }}
           >
-            {combinedPotholes.filter((p) => p.severity >= 7).length} hazards
-            nearby
+            {potholes.filter((p) => p.severity >= 7).length} hazards nearby
           </span>
         </div>
 
@@ -444,7 +442,7 @@ const CitizenHub = () => {
               lineHeight: 1.2,
             }}
           >
-            {combinedPotholes.length} active potholes · Bengaluru
+            {potholes.length} active potholes · Bengaluru
           </p>
         </div>
 
@@ -556,7 +554,7 @@ const CitizenHub = () => {
             width: 44,
             height: 44,
             borderRadius: "50%",
-            background: effectiveCoords
+            background: coords
               ? "rgba(255,255,255,0.95)"
               : "rgba(255,255,255,0.5)",
             border: "1px solid rgba(0,0,0,0.1)",
@@ -564,10 +562,10 @@ const CitizenHub = () => {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            cursor: effectiveCoords ? "pointer" : "default",
+            cursor: coords ? "pointer" : "default",
           }}
         >
-          <Locate size={20} color={effectiveCoords ? "#2563eb" : "#9ca3af"} />
+          <Locate size={20} color={coords ? "#2563eb" : "#9ca3af"} />
         </button>
 
         {/* Drive mode */}
