@@ -93,7 +93,7 @@ const CitizenDrive = () => {
             center={[12.9352, 77.5551]}
             zoom={13}
             showPopups={true}
-            routeData={routeData}
+            routePath={routeData}
           />
 
           {/* Map legend overlay */}
