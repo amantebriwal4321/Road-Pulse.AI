@@ -18,6 +18,7 @@ from db_client import (
     insert_raw_report,
     upsert_pothole,
     mark_pothole_fixed,
+    reset_database,
 )
 from ai_validator import validate_pothole
 from alerts import send_pothole_alert
@@ -39,6 +40,16 @@ app = FastAPI(
     description="Crowdsourced pothole detection & urban digital twin",
     version="1.0.0",
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Reset the database on application startup."""
+    logger.info("Resetting Supabase database on backend startup...")
+    success = reset_database()
+    if success:
+        logger.info("Database reset successfully.")
+    else:
+        logger.error("Failed to reset database on startup.")
 
 # CORS — allow all origins (required for frontend on different port)
 app.add_middleware(
@@ -158,3 +169,11 @@ async def fix_pothole(pothole_id: str):
     if success:
         return {"message": "Pothole marked as fixed", "id": pothole_id}
     raise HTTPException(status_code=404, detail=f"Pothole {pothole_id} not found")
+
+@app.post("/reset")
+async def reset_data():
+    """Clear all potholes and raw reports from the database."""
+    success = reset_database()
+    if success:
+        return {"message": "Database reset successfully"}
+    raise HTTPException(status_code=500, detail="Failed to reset database")

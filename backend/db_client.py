@@ -260,3 +260,16 @@ def insert_raw_report_direct(data: dict) -> Optional[str]:
     except Exception as e:
         logger.error("insert_raw_report_direct failed: %s", e)
         return None
+
+def reset_database() -> bool:
+    """Clear all data from potholes and raw_reports."""
+    try:
+        sb = _get_client()
+        # Delete using a dummy check that's always true to drop all rows
+        sb.table("raw_reports").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+        sb.table("potholes").delete().neq("id", "00000000-0000-0000-0000-000000000000").execute()
+        return True
+    except Exception as e:
+        logger.error("reset_database failed: %s", e)
+        return False
+
