@@ -25,6 +25,23 @@ export interface TwinScanState {
 
 const DEVICE_ID = "TWIN-SCAN-LIVE-01";
 
+const ROAD_POINTS = [
+  [12.9168, 77.6230], // Silk Board
+  [12.9140, 77.6252], // HSR
+  [12.9980, 77.5950], // Hebbal
+  [12.9850, 77.6050], // Nagavara
+  [12.9750, 77.6060], // MG Road
+  [12.9720, 77.6100], // Brigade
+  [12.9080, 77.5960], // Jayanagar
+  [13.0100, 77.5700], // Sadashivanagar
+  [13.0050, 77.5500], // Rajajinagar
+  [12.9690, 77.7490], // Whitefield
+  [12.9410, 77.5560], // Mysore Road
+  [12.9340, 77.6260], // Koramangala
+  [12.8450, 77.6600], // Electronic City
+  [12.9700, 77.6499], // Old Airport Road
+];
+
 /**
  * Jitter within DBSCAN clustering radius.
  * DBSCAN eps = 0.00005° ≈ 5m — so we jitter ≤ 3m to land in the same cluster.
@@ -36,11 +53,18 @@ function jitter(base: number, radiusDeg = 0.00003): number {
 
 // Move the "vehicle" ~80m along a road every N scans
 let scanCount = 0;
+let currentRoadIdx = 0;
 function getMovingBase(base: [number, number]): [number, number] {
   scanCount++;
+  // Every 8 scans, pick a completely different realistic road location and scatter slightly
   if (scanCount % 8 === 0) {
-    // Shift ~80m north-east to simulate driving
-    return [base[0] + 0.0007, base[1] + 0.0007];
+    currentRoadIdx = (currentRoadIdx + 1) % ROAD_POINTS.length;
+    const newBase = ROAD_POINTS[currentRoadIdx];
+    // Add real scatter (like reseed_realistic.py's scatter of 0.0008) to simulate movement along the road
+    return [
+      newBase[0] + (Math.random() * 2 - 1) * 0.0008,
+      newBase[1] + (Math.random() * 2 - 1) * 0.0008
+    ];
   }
   return base;
 }
