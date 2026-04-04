@@ -33,7 +33,7 @@ export default function DemoMode({ onNew }) {
         name: spot.name,
         lat: spot.lat + (Math.random() - 0.5) * 0.005,
         lng: spot.lng + (Math.random() - 0.5) * 0.005,
-        reportsLeft: Math.floor(Math.random() * 3) + 3 // 3 to 5 reports total
+        reportsLeft: Math.floor(Math.random() * 3) + 3, // 3 to 5 reports total
       });
     }
 
