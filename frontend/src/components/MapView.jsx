@@ -1,61 +1,85 @@
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet'
-import { useEffect } from 'react'
-import SeverityBadge from './SeverityBadge'
-import { markFixed } from '../services/api'
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Popup,
+  useMap,
+  Polyline,
+} from "react-leaflet";
+import { useEffect } from "react";
+import SeverityBadge from "./SeverityBadge";
+import { markFixed } from "../services/api";
 
 // Severity → marker color mapping
 function getSeverityColor(severity) {
-  if (severity >= 9) return '#991b1b'   // dark red — critical
-  if (severity >= 7) return '#ef4444'   // red — high
-  if (severity >= 4) return '#f59e0b'   // amber — medium
-  return '#22c55e'                       // green — low
+  if (severity >= 9) return "#991b1b"; // dark red — critical
+  if (severity >= 7) return "#ef4444"; // red — high
+  if (severity >= 4) return "#f59e0b"; // amber — medium
+  return "#22c55e"; // green — low
 }
 
 // Severity → marker radius (severity 10 = 30px)
 function getMarkerRadius(severity) {
-  return Math.max(6, Math.min(30, severity * 3))
+  return Math.max(6, Math.min(30, severity * 3));
 }
 
 // Format date nicely
 function formatDate(dateStr) {
-  if (!dateStr) return 'Unknown'
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  if (!dateStr) return "Unknown";
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 // Internal component to handle map center changes
 function MapController({ center, zoom }) {
-  const map = useMap()
+  const map = useMap();
   useEffect(() => {
-    if (center) map.flyTo(center, zoom || 13, { duration: 1.5 })
-  }, [center, zoom, map])
-  return null
+    if (center) map.flyTo(center, zoom || 13, { duration: 1.5 });
+  }, [center, zoom, map]);
+  return null;
 }
 
 // Exposes the Leaflet map instance to the parent via callback
 function MapRefSetter({ onMapRef }) {
-  const map = useMap()
+  const map = useMap();
   useEffect(() => {
-    if (onMapRef) onMapRef(map)
-  }, [map, onMapRef])
-  return null
+    if (onMapRef) onMapRef(map);
+  }, [map, onMapRef]);
+  return null;
 }
 
-export default function MapView({ potholes = [], mapCenter, mapZoom, onMapRef }) {
-  const defaultCenter = [12.9716, 77.5946] // Bengaluru
-  const defaultZoom = 12
+// Automatically fits the map to the route bounding box when routePath changes
+function RouteFitter({ routePath }) {
+  const map = useMap();
+  useEffect(() => {
+    if (routePath && routePath.length > 1) {
+      map.fitBounds(routePath, { padding: [50, 50], duration: 1.5 });
+    }
+  }, [routePath, map]);
+  return null;
+}
+
+export default function MapView({
+  potholes = [],
+  mapCenter,
+  mapZoom,
+  routePath,
+  onMapRef,
+}) {
+  const defaultCenter = [12.9716, 77.5946]; // Bengaluru
+  const defaultZoom = 12;
 
   async function handleMarkFixed(id) {
     try {
-      await markFixed(id)
+      await markFixed(id);
     } catch (err) {
-      console.error('Failed to mark fixed:', err)
+      console.error("Failed to mark fixed:", err);
     }
   }
 
@@ -73,8 +97,22 @@ export default function MapView({ potholes = [], mapCenter, mapZoom, onMapRef })
         maxZoom={19}
       />
 
-      {mapCenter && (
-        <MapController center={mapCenter} zoom={mapZoom || 15} />
+      {mapCenter && <MapController center={mapCenter} zoom={mapZoom || 15} />}
+
+      {routePath && <RouteFitter routePath={routePath} />}
+
+      {routePath && (
+        <Polyline
+          positions={routePath}
+          pathOptions={{
+            color: "#22d3ee", // Tailwind cyan-400
+            weight: 5,
+            opacity: 0.8,
+            dashArray: "1, 10",
+            lineCap: "round",
+            lineJoin: "round",
+          }}
+        />
       )}
 
       {potholes.map((pothole) => (
@@ -105,22 +143,31 @@ export default function MapView({ potholes = [], mapCenter, mapZoom, onMapRef })
                 <div className="flex justify-between">
                   <span className="text-slate-400">Reports</span>
                   <span className="font-medium">
-                    {pothole.report_count} driver{pothole.report_count !== 1 ? 's' : ''}
+                    {pothole.report_count} driver
+                    {pothole.report_count !== 1 ? "s" : ""}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Ward</span>
-                  <span className="font-medium">{pothole.ward || 'Unknown'}</span>
+                  <span className="font-medium">
+                    {pothole.ward || "Unknown"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">First reported</span>
-                  <span className="font-medium">{formatDate(pothole.first_reported)}</span>
+                  <span className="font-medium">
+                    {formatDate(pothole.first_reported)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Status</span>
-                  <span className={`font-medium capitalize ${
-                    pothole.status === 'open' ? 'text-red-400' : 'text-green-400'
-                  }`}>
+                  <span
+                    className={`font-medium capitalize ${
+                      pothole.status === "open"
+                        ? "text-red-400"
+                        : "text-green-400"
+                    }`}
+                  >
                     {pothole.status}
                   </span>
                 </div>
@@ -133,7 +180,7 @@ export default function MapView({ potholes = [], mapCenter, mapZoom, onMapRef })
               </div>
 
               {/* Mark as fixed button */}
-              {pothole.status === 'open' && (
+              {pothole.status === "open" && (
                 <button
                   onClick={() => handleMarkFixed(pothole.id)}
                   className="mt-3 w-full py-1.5 px-3 bg-green-600 hover:bg-green-500 
@@ -148,5 +195,5 @@ export default function MapView({ potholes = [], mapCenter, mapZoom, onMapRef })
         </CircleMarker>
       ))}
     </MapContainer>
-  )
+  );
 }
