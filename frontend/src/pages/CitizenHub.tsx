@@ -188,7 +188,6 @@ const CitizenHub = () => {
   const [driveMode, setDriveMode] = useState(false);
   const [proximityAlert, setProximityAlert] = useState<string | null>(null);
   const [mapRef, setMapRef] = useState<LeafletMap | null>(null);
-  const [routeData, setRouteData] = useState<any | null>(null);
   const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Demo fallback: use hardcoded Bengaluru location if GPS is outside city ──
@@ -265,7 +264,6 @@ const CitizenHub = () => {
             center={effectiveCoords ?? [12.9716, 77.5946]}
             zoom={16}
             showPopups={false}
-            routeData={routeData}
             onMapRef={setMapRef}
           />
         </div>
@@ -390,7 +388,6 @@ const CitizenHub = () => {
           center={effectiveCoords ?? [12.9716, 77.5946]}
           zoom={13}
           showPopups={true}
-          routeData={routeData}
           onMapRef={setMapRef}
         />
       </div>
