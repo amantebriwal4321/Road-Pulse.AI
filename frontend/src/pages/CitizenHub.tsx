@@ -226,9 +226,34 @@ const CitizenHub = () => {
   }, [combinedPotholes]);
 
   // ── Simulator Logic ──
-  const startSimulation = useCallback(() => {
+  const startSimulation = useCallback(async () => {
     if (!baseCoords) return;
     const [bLat, bLng] = baseCoords;
+    setSimulating(true);
+    setDriveMode(true); // Automatically enter drive mode to watch simulation
+
+    try {
+      // Pick a destination about 2km away for a realistic route
+      const destLat = bLat + 0.02;
+      const destLng = bLng + 0.02;
+      const res = await fetch(
+        `https://router.project-osrm.org/route/v1/driving/${bLng},${bLat};${destLng},${destLat}?overview=full&geometries=geojson`
+      );
+      const data = await res.json();
+      
+      if (data.routes && data.routes[0] && data.routes[0].geometry.coordinates) {
+        // OSRM returns geometry as [lng, lat], we need [lat, lng]
+        const coords = data.routes[0].geometry.coordinates.map((c: number[]) => [c[1], c[0]]);
+        setSimRoute(coords);
+        setSimIndex(0);
+        setSimPotholes([]);
+        return;
+      }
+    } catch (e) {
+      console.error("Failed to fetch realistic route, falling back to circle", e);
+    }
+
+    // Fallback to circular route if API fails
     const pts: [number, number][] = [];
     const r = 0.003; // small circle
     for (let i = 0; i < 60; i++) {
@@ -238,8 +263,6 @@ const CitizenHub = () => {
     setSimRoute(pts);
     setSimIndex(0);
     setSimPotholes([]);
-    setSimulating(true);
-    setDriveMode(true); // Automatically enter drive mode to watch simulation
   }, [baseCoords]);
 
   useEffect(() => {
@@ -251,6 +274,7 @@ const CitizenHub = () => {
     }
     const t = setTimeout(() => {
       setSimIndex((i) => i + 1);
+      // Spawn potholes dynamically on the actual road segment
       if (Math.random() < 0.25) {
         setSimPotholes((prev) => [
           ...prev,
