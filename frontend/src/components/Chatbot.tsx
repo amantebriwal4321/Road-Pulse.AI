@@ -2,8 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { distanceMeters } from "@/lib/haversine";
 import type { PotholeData } from "@/services/api";
 
+export interface RouteResult {
+  path: [number, number][];
+  distanceKm: number;
+  potholesCount: number;
+}
+
 interface ChatbotProps {
-  onShowRoute: (route: [number, number][] | null) => void;
+  onShowRoute: (route: RouteResult | null) => void;
   potholes?: PotholeData[];
 }
 
@@ -119,7 +125,11 @@ export function Chatbot({ onShowRoute, potholes = [] }: ChatbotProps) {
           text: `I simulated ${data.routes.length} possible route options. The safest path found between ${originQuery} and ${destQuery} encounters only ${minPotholesFound} open potholes (Distance: ${(bestDistance / 1000).toFixed(1)} km). I've highlighted it for you!`,
         },
       ]);
-      onShowRoute(bestRouteCoords);
+      onShowRoute({
+        path: bestRouteCoords!,
+        distanceKm: bestDistance / 1000,
+        potholesCount: minPotholesFound,
+      });
     } catch (err: any) {
       console.error("Routing Error:", err);
       setMessages((prev) => [

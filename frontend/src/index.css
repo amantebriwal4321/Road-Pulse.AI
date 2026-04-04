@@ -189,4 +189,483 @@
   .location-tooltip::before {
     display: none;
   }
+
+  /* ─── Route tooltips ─────────────────────────────────────── */
+  .route-tooltip-start,
+  .route-tooltip-end {
+    background: rgba(15, 23, 42, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: white !important;
+    font-size: 11px !important;
+    padding: 4px 10px !important;
+    border-radius: 8px !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    letter-spacing: 0.5px;
+  }
+  .route-tooltip-start::before,
+  .route-tooltip-end::before {
+    border-top-color: rgba(15, 23, 42, 0.9) !important;
+  }
+
+  /* ─── Route info card (floating on map) ──────────────────── */
+  .route-info-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(14, 165, 233, 0.2);
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow:
+      0 4px 24px rgba(14, 165, 233, 0.15),
+      0 1px 4px rgba(0, 0, 0, 0.08);
+    min-width: 200px;
+    animation: routeCardAppear 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: center bottom;
+    pointer-events: none;
+  }
+  @keyframes routeCardAppear {
+    0% {
+      opacity: 0;
+      transform: scale(0.85) translateY(8px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  .route-info-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(14, 165, 233, 0.1);
+  }
+  .route-info-header span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: #0ea5e9;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .route-info-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .route-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  .route-stat-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .route-stat-safe {
+    color: #22c55e !important;
+  }
+  .route-stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 600;
+  }
+  .route-stat-divider {
+    width: 1px;
+    height: 28px;
+    background: linear-gradient(to bottom, transparent, rgba(14, 165, 233, 0.3), transparent);
+  }
+
+  /* ─── Pothole marker hover glow ──────────────────────────── */
+  .leaflet-interactive:hover {
+    filter: brightness(1.2) drop-shadow(0 0 6px currentColor);
+    transition: filter 0.2s ease;
+  }
+
+  /* ─── Map container polish ───────────────────────────────── */
+  .leaflet-container {
+    font-family: 'Space Grotesk', sans-serif !important;
+  }
+  .leaflet-control-zoom a {
+    background: rgba(255, 255, 255, 0.92) !important;
+    backdrop-filter: blur(12px) !important;
+    color: #1e3a8a !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+    font-weight: 700 !important;
+    transition: all 0.2s ease !important;
+  }
+  .leaflet-control-zoom a:hover {
+    background: rgba(37, 99, 235, 0.1) !important;
+    color: #2563eb !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DRIVE SIMULATION STYLES
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Vehicle marker ────────────────────────────────────────────── */
+.sim-vehicle {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+.sim-vehicle-body {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.9),
+    0 0 20px rgba(37, 99, 235, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+}
+.sim-vehicle-radar {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 2px solid rgba(37, 99, 235, 0.4);
+  animation: simRadarSweep 1.5s ease-out infinite;
+}
+@keyframes simRadarSweep {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* ── Radar scan pulse (emitted at scan points) ────────────────── */
+.sim-radar-pulse {
+  position: relative;
+  width: 0;
+  height: 0;
+}
+.sim-radar-pulse::before,
+.sim-radar-pulse::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid rgba(37, 99, 235, 0.6);
+  animation: simPulseExpand 1.8s ease-out forwards;
+}
+.sim-radar-pulse::before {
+  width: 20px; height: 20px;
+}
+.sim-radar-pulse::after {
+  width: 20px; height: 20px;
+  animation-delay: 0.3s;
+}
+@keyframes simPulseExpand {
+  0% {
+    width: 20px; height: 20px;
+    opacity: 0.8;
+  }
+  100% {
+    width: 160px; height: 160px;
+    opacity: 0;
+  }
+}
+
+/* ── Detection ring around potholes ───────────────────────────── */
+.sim-detection-ring {
+  animation: simDetectionFlash 0.6s ease-out;
+}
+@keyframes simDetectionFlash {
+  0% { stroke-width: 6; opacity: 1; }
+  100% { stroke-width: 2; opacity: 0.8; }
+}
+
+/* ── Detection alert badge (floats above pothole) ─────────────── */
+.sim-detection-alert {
+  display: flex;
+  justify-content: center;
+}
+.sim-detection-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  animation: simBadgeAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+.sim-detection-badge.high {
+  background: rgba(239, 68, 68, 0.95);
+  color: white;
+}
+.sim-detection-badge.medium {
+  background: rgba(245, 158, 11, 0.95);
+  color: white;
+}
+@keyframes simBadgeAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(10px);
+  }
+  50% {
+    transform: scale(1.1) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SIMULATION HUD STYLES
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Top HUD bar ──────────────────────────────────────────────── */
+.sim-hud-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2000;
+  background: linear-gradient(to bottom, rgba(15, 23, 42, 0.92) 0%, rgba(15, 23, 42, 0.85) 80%, transparent 100%);
+  backdrop-filter: blur(16px);
+  padding: 12px 16px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Live indicator */
+.sim-hud-live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sim-hud-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+.sim-hud-live-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #22c55e;
+  letter-spacing: 1.5px;
+}
+
+/* Stats row */
+.sim-hud-stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  justify-content: center;
+}
+.sim-hud-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sim-hud-stat-icon {
+  color: rgba(255, 255, 255, 0.5);
+}
+.sim-hud-stat-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+}
+.sim-hud-stat-unit {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 2px;
+}
+.sim-hud-stat-sep {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Stop button */
+.sim-hud-stop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+}
+.sim-hud-stop:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: white;
+}
+
+/* Progress bar at bottom of HUD */
+.sim-hud-progress-track {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.sim-hud-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #06b6d4);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.4);
+}
+
+/* ── Detection feed (bottom-left overlay) ─────────────────────── */
+.sim-detection-feed {
+  position: absolute;
+  bottom: 100px;
+  left: 12px;
+  z-index: 1500;
+  width: 260px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+.sim-detection-feed-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(239, 68, 68, 0.08);
+}
+.sim-detection-feed-icon {
+  color: #ef4444;
+  animation: pulse-glow 1s ease-in-out infinite;
+}
+.sim-detection-feed-header span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: #ef4444;
+  letter-spacing: 1px;
+}
+
+/* Detection item */
+.sim-detection-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.3s;
+}
+.sim-detection-item.latest {
+  background: rgba(239, 68, 68, 0.08);
+}
+.sim-detection-item-content {
+  flex: 1;
+  min-width: 0;
+}
+.sim-detection-item-label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+}
+.sim-detection-item-meta {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 1px;
+}
+.sim-detection-item-sev {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* ── Simulated pothole marker appearance ──────────────────────── */
+.sim-pothole-appear {
+  animation: simPotholePopIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes simPotholePopIn {
+  0% {
+    r: 0;
+    stroke-opacity: 0;
+    fill-opacity: 0;
+  }
+  60% {
+    stroke-opacity: 1;
+    fill-opacity: 0.7;
+  }
+  100% {
+    stroke-opacity: 0.85;
+    fill-opacity: 0.6;
+  }
+}
+
+/* Floating label above simulated potholes */
+.sim-pothole-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  animation: simBadgeAppear 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+}
+.sim-pothole-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: white;
+  white-space: nowrap;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+}
+.sim-pothole-ward {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 7px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 1px 6px;
+  border-radius: 4px;
 }

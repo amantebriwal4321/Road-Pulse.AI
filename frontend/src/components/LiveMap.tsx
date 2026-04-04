@@ -4,13 +4,13 @@ import {
   CircleMarker,
   Popup,
   useMap,
-  Polyline,
 } from "react-leaflet";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, type ReactNode } from "react";
 import type { Map as LeafletMap } from "leaflet";
 import type { PotholeData } from "@/services/api";
 import { markFixed } from "@/services/api";
 import { UserLocationMarker } from "@/components/UserLocationMarker";
+import { AnimatedRoute } from "@/components/AnimatedRoute";
 import "leaflet/dist/leaflet.css";
 
 /** ─── Severity helpers ─────────────────────────────────────── */
@@ -27,7 +27,7 @@ function getSeverityLabel(severity: number): string {
 }
 
 function getMarkerRadius(severity: number): number {
-  return Math.max(5, Math.min(24, severity * 2.5));
+  return Math.max(4, Math.min(10, severity * 1.1));
 }
 
 /** ─── Internal sub-components ─────────────────────────────── */
@@ -44,16 +44,6 @@ function FlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
   useEffect(() => {
     map.flyTo(center, zoom, { duration: 1.5 });
   }, [center, zoom, map]);
-  return null;
-}
-
-function RouteFitter({ routePath }: { routePath: [number, number][] }) {
-  const map = useMap();
-  useEffect(() => {
-    if (routePath && routePath.length > 1) {
-      map.fitBounds(routePath, { padding: [50, 50], duration: 1.5 });
-    }
-  }, [routePath, map]);
   return null;
 }
 
@@ -83,12 +73,13 @@ interface LiveMapProps {
   flyToZoom?: number;
   onMapRef?: (map: LeafletMap) => void;
   showPopups?: boolean;
-  /** 'light' = CartoDB Positron (default), 'dark' = CartoDB DarkMatter */
   tileMode?: "light" | "dark";
-  /** If provided, renders a pulsing blue "You Are Here" dot */
   userLocation?: [number, number] | null;
-  /** Route path array */
   routePath?: [number, number][] | null;
+  routeDistanceKm?: number;
+  routePotholesCount?: number;
+  /** Children rendered inside MapContainer (e.g. DriveSim) */
+  children?: ReactNode;
 }
 
 /** ─── Component ─────────────────────────────────────────────── */
@@ -101,9 +92,12 @@ export function LiveMap({
   flyToZoom = 15,
   onMapRef,
   showPopups = true,
-  tileMode = "light", // ← default changed to light
+  tileMode = "light",
   userLocation = null,
   routePath = null,
+  routeDistanceKm,
+  routePotholesCount,
+  children,
 }: LiveMapProps) {
   const tile = TILES[tileMode];
 
@@ -122,19 +116,11 @@ export function LiveMap({
         <UserLocationMarker coords={userLocation} centerOnFirst />
       ) : null}
 
-      {routePath && <RouteFitter routePath={routePath} />}
-
-      {routePath && (
-        <Polyline
-          positions={routePath}
-          pathOptions={{
-            color: "#22d3ee", // Tailwind cyan-400
-            weight: 5,
-            opacity: 0.8,
-            dashArray: "1, 10",
-            lineCap: "round",
-            lineJoin: "round",
-          }}
+      {routePath && routePath.length > 1 && (
+        <AnimatedRoute
+          routePath={routePath}
+          distanceKm={routeDistanceKm}
+          potholesAvoided={routePotholesCount}
         />
       )}
 
@@ -229,6 +215,8 @@ export function LiveMap({
           ) : null}
         </CircleMarker>
       ))}
+
+      {children}
     </MapContainer>
   );
 }
