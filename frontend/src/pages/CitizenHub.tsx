@@ -1,125 +1,330 @@
-import { MetaverseGrid } from "@/components/MetaverseGrid";
-import { GlassCard } from "@/components/GlassCard";
-import { HUDLabel } from "@/components/HUDLabel";
-import { SeverityPulse } from "@/components/SeverityPulse";
-import { LiveMap } from "@/components/LiveMap";
-import { usePotholes } from "@/hooks/usePotholes";
-import { useNavigate } from "react-router-dom";
-import { useMemo } from "react";
-import { Map, LayoutGrid, User, AlertTriangle, TrendingDown, CheckCircle } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { LiveMap } from '@/components/LiveMap';
+import { usePotholes } from '@/hooks/usePotholes';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { distanceMeters } from '@/lib/haversine';
+import { useNavigate } from 'react-router-dom';
+import { HUDLabel } from '@/components/HUDLabel';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  LayoutGrid, User, MapPin, Navigation, Car,
+  Radio, AlertTriangle, X, Locate,
+} from 'lucide-react';
+import type { Map as LeafletMap } from 'leaflet';
 
-const CitizenHub = () => {
+// ─── Bottom Nav ────────────────────────────────────────────────
+const BottomNav = ({ active }: { active: string }) => {
   const navigate = useNavigate();
-  const { potholes } = usePotholes(5000);
-
-  // Live road alerts from top-5 most recent high-severity potholes
-  const alerts = useMemo(() => {
-    const severityMap = (sev: number) => {
-      if (sev >= 9) return 'critical' as const;
-      if (sev >= 7) return 'pothole' as const;
-      if (sev >= 4) return 'rough' as const;
-      return 'smooth' as const;
-    };
-    const messageMap = (sev: number) => {
-      if (sev >= 9) return 'Critical pothole cluster detected';
-      if (sev >= 7) return 'Road quality deteriorating';
-      if (sev >= 4) return 'Surface wear increasing';
-      return 'Road condition stable';
-    };
-    return [...potholes]
-      .sort((a, b) => b.severity - a.severity)
-      .slice(0, 5)
-      .map((p, i) => ({
-        severity: severityMap(p.severity),
-        road: p.ward || 'Unknown Road',
-        message: messageMap(p.severity),
-        time: i === 0 ? 'Just now' : `${(i * 15)}m ago`,
-      }));
-  }, [potholes]);
-
-  // Live city stats
-  const cityStats = useMemo(() => {
-    const active = potholes.length;
-    const avgSev = active > 0 ? potholes.reduce((s, p) => s + p.severity, 0) / active : 0;
-    const healthScore = Math.round(100 - avgSev * 10);
-    return [
-      { icon: AlertTriangle, value: active.toLocaleString(), label: 'Active Complaints' },
-      { icon: CheckCircle, value: String(Math.round(active * 0.2)), label: 'Repairs This Month' },
-      { icon: TrendingDown, value: `${healthScore}/100`, label: 'City Health Score' },
-    ];
-  }, [potholes]);
-
+  const items = [
+    { id: 'drive', label: 'Drive', icon: Navigation, path: '/citizen/drive' },
+    { id: 'hub',   label: 'Hub',   icon: LayoutGrid, path: '/citizen/hub'   },
+    { id: 'profile', label: 'Profile', icon: User,   path: '/citizen/profile' },
+  ];
   return (
-    <div className="min-h-screen bg-metaverse-grid relative pb-24">
-      <MetaverseGrid />
-      <div className="relative z-10 p-4">
-        <div className="flex items-center gap-3 mb-6">
-          <HUDLabel>TWIN HUB</HUDLabel>
-          <h2 className="text-xl font-display font-semibold text-foreground">Your Road Intelligence</h2>
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000]">
+      <div style={{
+        background: 'rgba(255,255,255,0.92)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(0,0,0,0.08)',
+        borderRadius: 9999,
+        boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+        padding: '10px 28px',
+        display: 'flex',
+        gap: 32,
+      }}>
+        {items.map((item) => (
+          <button key={item.id} onClick={() => navigate(item.path)}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer',
+              color: item.id === active ? '#2563eb' : '#9ca3af', border: 'none', background: 'transparent' }}>
+            <item.icon size={20} />
+            <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: item.id === active ? 700 : 400 }}>
+              {item.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── Proximity Alert Banner ────────────────────────────────────
+function ProximityAlert({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  return (
+    <div className="animate-slide-down" style={{
+      position: 'absolute', top: 60, left: 12, right: 12, zIndex: 2000,
+      background: 'rgba(239,68,68,0.95)', backdropFilter: 'blur(12px)',
+      borderRadius: 12, padding: '12px 16px',
+      display: 'flex', alignItems: 'center', gap: 10,
+      boxShadow: '0 4px 20px rgba(239,68,68,0.35)',
+    }}>
+      <AlertTriangle size={18} color="white" />
+      <span style={{ flex: 1, color: 'white', fontSize: 13, fontFamily: 'monospace', fontWeight: 600 }}>
+        {message}
+      </span>
+      <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+        <X size={16} color="rgba(255,255,255,0.8)" />
+      </button>
+    </div>
+  );
+}
+
+// ─── Twin Advisories pill ─────────────────────────────────────
+function AdvisoryPill({ text }: { text: string }) {
+  return (
+    <div style={{
+      position: 'absolute', bottom: 90, left: 12, right: 12, zIndex: 1000,
+      background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)',
+      border: '1px solid rgba(37,99,235,0.2)', borderRadius: 12,
+      padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8,
+      boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+    }}>
+      <div style={{
+        width: 8, height: 8, borderRadius: '50%', background: '#2563eb',
+        flexShrink: 0, boxShadow: '0 0 0 3px rgba(37,99,235,0.2)',
+        animation: 'locationPulse 2s ease-out infinite',
+      }} />
+      <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#1e3a8a', flex: 1, fontWeight: 600 }}>
+        TWIN ADVISORIES · LIVE
+      </span>
+      <span style={{ fontSize: 12, color: '#374151' }}>{text}</span>
+    </div>
+  );
+}
+
+// ─── Main CitizenHub ──────────────────────────────────────────
+const CitizenHub = () => {
+  const { potholes } = usePotholes(8000);
+  const { coords, error: geoError } = useGeolocation(3000);
+  const [autoDetect, setAutoDetect] = useState(true);
+  const [driveMode, setDriveMode] = useState(false);
+  const [proximityAlert, setProximityAlert] = useState<string | null>(null);
+  const [mapRef, setMapRef] = useState<LeafletMap | null>(null);
+  const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Advisory text: closest high-severity pothole ─────────────
+  const advisoryText = useMemo(() => {
+    if (!potholes.length) return 'No active alerts nearby';
+    const critical = potholes.find(p => p.severity >= 9);
+    if (critical) return `⚠️ Critical cluster · ${critical.ward ?? 'Unknown'}`;
+    const high = potholes.find(p => p.severity >= 7);
+    if (high) return `⚠️ High severity · ${high.ward ?? 'Unknown'}`;
+    return `${potholes.length} potholes tracked · Bengaluru`;
+  }, [potholes]);
+
+  // ── Proximity detection ──────────────────────────────────────
+  const checkProximity = useCallback(() => {
+    if (!autoDetect || !coords || !potholes.length) return;
+    const [uLat, uLng] = coords;
+    const nearby = potholes
+      .filter(p => distanceMeters(uLat, uLng, p.lat, p.lng) < 300)
+      .sort((a, b) => b.severity - a.severity);
+    if (!nearby.length) return;
+    const closest = nearby[0];
+    const dist = Math.round(distanceMeters(uLat, uLng, closest.lat, closest.lng));
+    const label =
+      closest.severity >= 7 ? 'HIGH' :
+      closest.severity >= 4 ? 'MEDIUM' : 'LOW';
+    setProximityAlert(`${label} severity pothole ${dist}m away · ${closest.ward ?? 'Nearby'}`);
+    if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+    alertTimerRef.current = setTimeout(() => setProximityAlert(null), 5000);
+  }, [autoDetect, coords, potholes]);
+
+  useEffect(() => {
+    if (!autoDetect) return;
+    const interval = setInterval(checkProximity, 5000);
+    return () => clearInterval(interval);
+  }, [autoDetect, checkProximity]);
+
+  // ── Centre on user ───────────────────────────────────────────
+  const centreOnUser = useCallback(() => {
+    if (mapRef && coords) mapRef.flyTo(coords, 16, { duration: 1.2 });
+  }, [mapRef, coords]);
+
+  // ── Drive mode: lock orientation / full screen ───────────────
+  if (driveMode) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000' }}>
+        {/* Full-screen dark map in drive mode */}
+        <div style={{ position: 'absolute', inset: 0 }}>
+          <LiveMap
+            potholes={potholes}
+            height="100%"
+            tileMode="dark"
+            userLocation={coords}
+            center={coords ?? [12.9716, 77.5946]}
+            zoom={16}
+            showPopups={false}
+            onMapRef={setMapRef}
+          />
         </div>
 
-        {/* City Road Explorer — LIVE Leaflet map */}
-        <GlassCard className="p-0 overflow-hidden mb-6" nohover>
-          <div className="relative">
-            <div className="h-[200px]">
-              <LiveMap potholes={potholes} height="200px" showPopups={false} />
-            </div>
-            <div className="absolute top-3 right-3 z-[1000]"><HUDLabel>CITY TWIN · LIVE</HUDLabel></div>
+        {/* HUD overlay */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, padding: '16px 20px',
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 100,
+        }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%', background: '#00fff7',
+              boxShadow: '0 0 6px #00fff7', animation: 'locationPulse 2s ease-out infinite',
+            }} />
+            <span style={{ color: '#00fff7', fontFamily: 'monospace', fontSize: 11, fontWeight: 700 }}>
+              TWIN ACTIVE · SCANNING
+            </span>
           </div>
-          <div className="p-4 flex gap-2 overflow-x-auto">
-            {['ALL', 'CRITICAL', 'HIGH', 'NEAR ME', 'MY ROUTES'].map((f) => (
-              <button key={f} className="px-3 py-1.5 text-[10px] font-mono rounded-full border border-border-glow text-text-secondary hover:border-cyan hover:text-cyan transition-colors whitespace-nowrap cursor-pointer">
-                {f}
-              </button>
-            ))}
-          </div>
-        </GlassCard>
-
-        {/* Road Alerts Feed — LIVE from API */}
-        <div className="mb-6">
-          <HUDLabel className="mb-3">TWIN ADVISORIES · LIVE</HUDLabel>
-          <div className="space-y-3 mt-3">
-            {alerts.map((a, i) => (
-              <GlassCard key={i} className="p-4 flex items-start gap-3" nohover>
-                <SeverityPulse severity={a.severity} size="sm" className="mt-1" />
-                <div className="flex-1">
-                  <p className="text-foreground text-sm font-display">{a.message}</p>
-                  <p className="text-text-secondary text-xs font-mono mt-1">{a.road} · {a.time}</p>
-                </div>
-              </GlassCard>
-            ))}
-          </div>
+          <button
+            onClick={() => setDriveMode(false)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)',
+              color: 'white', borderRadius: 8, padding: '6px 14px', cursor: 'pointer',
+              fontSize: 12, fontFamily: 'monospace',
+            }}>
+            <X size={14} /> EXIT DRIVE MODE
+          </button>
         </div>
 
-        {/* City Stats — LIVE */}
-        <HUDLabel className="mb-3">CITY SNAPSHOT · LIVE</HUDLabel>
-        <div className="grid grid-cols-3 gap-3 mt-3">
-          {cityStats.map((s) => (
-            <GlassCard key={s.label} className="p-3 text-center" nohover>
-              <s.icon className="w-4 h-4 text-cyan mx-auto mb-1" />
-              <p className="font-mono text-lg text-cyan font-bold">{s.value}</p>
-              <p className="text-text-secondary text-[9px] font-mono mt-1">{s.label}</p>
-            </GlassCard>
-          ))}
+        {/* Nearby potholes count badge */}
+        <div style={{
+          position: 'absolute', bottom: 40, left: 20, zIndex: 100,
+          background: 'rgba(239,68,68,0.9)', borderRadius: 10, padding: '8px 16px',
+        }}>
+          <span style={{ color: 'white', fontFamily: 'monospace', fontWeight: 700, fontSize: 13 }}>
+            {potholes.filter(p => p.severity >= 7).length} hazards nearby
+          </span>
         </div>
+
+        <AnimatePresence>
+          {proximityAlert && (
+            <motion.div initial={{ y: -80 }} animate={{ y: 0 }} exit={{ y: -80 }}
+              style={{ position: 'absolute', top: 70, left: 12, right: 12, zIndex: 200 }}>
+              <ProximityAlert message={proximityAlert} onDismiss={() => setProximityAlert(null)} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  // ── Normal Hub view ──────────────────────────────────────────
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: '#f8fafc' }}>
+
+      {/* ── Full-screen LIGHT map ── */}
+      <div style={{ position: 'absolute', inset: 0 }}>
+        <LiveMap
+          potholes={potholes}
+          height="100%"
+          tileMode="light"
+          userLocation={autoDetect ? coords : null}
+          center={[12.9716, 77.5946]}
+          zoom={13}
+          showPopups={true}
+          onMapRef={setMapRef}
+        />
       </div>
 
-      {/* Bottom Nav */}
-      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40">
-        <div className="glass-card px-6 py-3 flex gap-8 rounded-full">
-          {[
-            { id: 'drive', label: 'Drive', icon: Map, path: '/citizen/drive' },
-            { id: 'hub', label: 'Hub', icon: LayoutGrid, path: '/citizen/hub' },
-            { id: 'profile', label: 'Profile', icon: User, path: '/citizen/profile' },
-          ].map((item) => (
-            <button key={item.id} onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${item.id === 'hub' ? 'text-cyan' : 'text-text-secondary hover:text-foreground'}`}>
-              <item.icon className="w-5 h-5" />
-              <span className="text-[10px] font-mono">{item.label}</span>
-            </button>
-          ))}
+      {/* ── Top bar overlay ── */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
+        padding: '12px 16px',
+        background: 'linear-gradient(to bottom, rgba(248,250,252,0.95) 0%, rgba(248,250,252,0) 100%)',
+        display: 'flex', alignItems: 'center', gap: 10,
+      }}>
+        {/* Title */}
+        <div style={{ flex: 1 }}>
+          <p style={{ fontFamily: 'monospace', fontSize: 10, color: '#6b7280', letterSpacing: '0.12em', fontWeight: 700 }}>
+            ROADPULSE TWIN HUB
+          </p>
+          <p style={{ fontSize: 16, fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.2 }}>
+            {potholes.length} active potholes · Bengaluru
+          </p>
         </div>
+
+        {/* Auto-detect toggle */}
+        <button
+          onClick={() => setAutoDetect(v => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+            background: autoDetect ? 'rgba(37,99,235,0.1)' : 'rgba(156,163,175,0.1)',
+            border: `1px solid ${autoDetect ? 'rgba(37,99,235,0.3)' : 'rgba(156,163,175,0.3)'}`,
+            borderRadius: 8, padding: '6px 12px',
+          }}>
+          <Radio size={14} color={autoDetect ? '#2563eb' : '#9ca3af'} />
+          <span style={{
+            fontFamily: 'monospace', fontSize: 10, fontWeight: 700,
+            color: autoDetect ? '#2563eb' : '#9ca3af',
+          }}>
+            {autoDetect ? 'DETECT ON' : 'DETECT OFF'}
+          </span>
+        </button>
       </div>
+
+      {/* ── GPS error notice ── */}
+      {geoError && (
+        <div style={{
+          position: 'absolute', top: 60, left: 12, right: 12, zIndex: 1000,
+          background: 'rgba(251,191,36,0.95)', borderRadius: 10, padding: '8px 14px',
+          display: 'flex', gap: 8, alignItems: 'center',
+        }}>
+          <MapPin size={14} color="#78350f" />
+          <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#78350f' }}>{geoError}</span>
+        </div>
+      )}
+
+      {/* ── Proximity alert ── */}
+      <AnimatePresence>
+        {proximityAlert && (
+          <motion.div initial={{ y: -80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -80, opacity: 0 }}
+            style={{ position: 'absolute', top: 60, left: 12, right: 12, zIndex: 2000 }}>
+            <ProximityAlert message={proximityAlert} onDismiss={() => setProximityAlert(null)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Floating action buttons (right side) ── */}
+      <div style={{
+        position: 'absolute', right: 14, bottom: 110, zIndex: 1000,
+        display: 'flex', flexDirection: 'column', gap: 10,
+      }}>
+        {/* Centre on me */}
+        <button
+          onClick={centreOnUser}
+          disabled={!coords}
+          title="Centre on my location"
+          style={{
+            width: 44, height: 44, borderRadius: '50%',
+            background: coords ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.5)',
+            border: '1px solid rgba(0,0,0,0.1)',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: coords ? 'pointer' : 'default',
+          }}>
+          <Locate size={20} color={coords ? '#2563eb' : '#9ca3af'} />
+        </button>
+
+        {/* Drive mode */}
+        <button
+          onClick={() => setDriveMode(true)}
+          title="Enter Drive Mode"
+          style={{
+            width: 44, height: 44, borderRadius: '50%',
+            background: 'rgba(37,99,235,0.95)',
+            border: '1px solid rgba(37,99,235,0.5)',
+            boxShadow: '0 2px 12px rgba(37,99,235,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+          }}>
+          <Car size={20} color="white" />
+        </button>
+      </div>
+
+      {/* ── Twin Advisories pill ── */}
+      <AdvisoryPill text={advisoryText} />
+
+      {/* ── Bottom nav ── */}
+      <BottomNav active="hub" />
     </div>
   );
 };

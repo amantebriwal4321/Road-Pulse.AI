@@ -12,7 +12,7 @@ const CitizenLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { register, handleSubmit } = useForm();
 
-  const onSubmit = () => navigate('/citizen/drive');
+  const onSubmit = () => navigate('/citizen/hub');
 
   return (
     <div className="min-h-screen bg-metaverse-grid flex items-center justify-center px-4">

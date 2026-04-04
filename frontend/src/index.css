@@ -159,4 +159,34 @@
   .animate-border-cycle {
     animation: border-cycle 3s ease-in-out infinite;
   }
+
+  /* User location dot pulse (blue GPS indicator) */
+  @keyframes locationPulse {
+    0% { transform: scale(1); opacity: 0.6; }
+    70% { transform: scale(2.2); opacity: 0; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+
+  /* Proximity alert slide-in from top */
+  @keyframes slideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  .animate-slide-down {
+    animation: slideDown 0.4s ease forwards;
+  }
+
+  /* Leaflet location tooltip */
+  .location-tooltip {
+    background: rgba(37,99,235,0.9);
+    border: none;
+    color: white;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+  .location-tooltip::before {
+    display: none;
+  }
 }

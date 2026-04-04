@@ -1,31 +1,66 @@
-import { MetaverseGrid } from "@/components/MetaverseGrid";
-import { GlassCard } from "@/components/GlassCard";
-import { HUDLabel } from "@/components/HUDLabel";
-import { NeonButton } from "@/components/NeonButton";
-import { LiveIndicator } from "@/components/LiveIndicator";
-import { SeverityPulse } from "@/components/SeverityPulse";
-import { useCommuteStore } from "@/stores/commuteStore";
-import { aiAlerts } from "@/data/commute-simulation";
-import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Navigation, Map, LayoutGrid, User, X } from "lucide-react";
+/**
+ * CitizenDrive — Route Planner + AI Chatbot Interface
+ *
+ * Layout: Full-screen split view
+ *   [LEFT / TOP on mobile]  → Live Leaflet map with pothole markers
+ *   [RIGHT / BOTTOM sidebar] → AI Route Chatbot
+ *
+ * ── AI_CHATBOT_INTEGRATION POINT ──────────────────────────────
+ * When your AI chatbot is ready, plug it into the `handleSendMessage`
+ * function below. It receives the user's message string and should:
+ *   1. Call your AI route API
+ *   2. Return a text response (shown as a chat bubble)
+ *   3. Optionally return route polyline coords → pass to setRoutePolyline()
+ *      to draw the route on the map
+ * ──────────────────────────────────────────────────────────────
+ */
 
-const CitizenBottomNav = ({ active }: { active: string }) => {
+import { useState, useRef, useEffect } from 'react';
+import { LiveMap }       from '@/components/LiveMap';
+import { usePotholes }   from '@/hooks/usePotholes';
+import { useNavigate }   from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Send, Bot, User, MapPin, Navigation,
+  LayoutGrid, Map, ChevronDown, ChevronUp,
+  Sparkles, X,
+} from 'lucide-react';
+
+// ─── Types ───────────────────────────────────────────────────────
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  text: string;
+  timestamp: Date;
+}
+
+// ─── Bottom Nav ──────────────────────────────────────────────────
+const BottomNav = ({ active }: { active: string }) => {
   const navigate = useNavigate();
   const items = [
-    { id: 'drive', label: 'Drive', icon: Map, path: '/citizen/drive' },
-    { id: 'hub', label: 'Hub', icon: LayoutGrid, path: '/citizen/hub' },
-    { id: 'profile', label: 'Profile', icon: User, path: '/citizen/profile' },
+    { id: 'drive',   label: 'Drive',   icon: Map,        path: '/citizen/drive'   },
+    { id: 'hub',     label: 'Hub',     icon: LayoutGrid, path: '/citizen/hub'     },
+    { id: 'profile', label: 'Profile', icon: User,       path: '/citizen/profile' },
   ];
   return (
-    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40">
-      <div className="glass-card px-6 py-3 flex gap-8 rounded-full">
+    <div style={{
+      position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 1000,
+    }}>
+      <div style={{
+        background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(0,0,0,0.08)', borderRadius: 9999,
+        boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+        padding: '10px 28px', display: 'flex', gap: 32,
+      }}>
         {items.map((item) => (
-          <button key={item.id} onClick={() => navigate(item.path)}
-            className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${active === item.id ? 'text-cyan' : 'text-text-secondary hover:text-foreground'}`}>
-            <item.icon className="w-5 h-5" />
-            <span className="text-[10px] font-mono">{item.label}</span>
+          <button key={item.id} onClick={() => navigate(item.path)} style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            cursor: 'pointer', color: item.id === active ? '#2563eb' : '#9ca3af',
+            border: 'none', background: 'transparent',
+          }}>
+            <item.icon size={20} />
+            <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: item.id === active ? 700 : 400 }}>
+              {item.label}
+            </span>
           </button>
         ))}
       </div>
@@ -33,212 +68,410 @@ const CitizenBottomNav = ({ active }: { active: string }) => {
   );
 };
 
+// ─── Typing indicator dots ────────────────────────────────────────
+const TypingDots = () => (
+  <div style={{ display: 'flex', gap: 4, padding: '4px 0' }}>
+    {[0, 1, 2].map((i) => (
+      <div key={i} style={{
+        width: 6, height: 6, borderRadius: '50%', background: '#2563eb',
+        animation: `typingBounce 1.2s ${i * 0.2}s ease-in-out infinite`,
+      }} />
+    ))}
+  </div>
+);
+
+// ─── Main Component ───────────────────────────────────────────────
 const CitizenDrive = () => {
-  const { status, selectedRoute, selectRoute, startDrive, endDrive, resetDrive, tripStats } = useCommuteStore();
-  const [alertIdx, setAlertIdx] = useState(0);
-  const [showAlert, setShowAlert] = useState(false);
-  const [detectionFlash, setDetectionFlash] = useState(false);
+  const { potholes } = usePotholes(10000);
 
-  // Simulate AI alerts during drive
+  // ── Chat state ───────────────────────────────────────────────
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: 'assistant',
+      text: "Hi! I'm your RoadPulse AI navigator 🗺️\n\nTell me where you want to go and I'll find the smoothest route — avoiding potholes along the way.\n\nExample: \"From Silk Board to Manyata Tech Park\"",
+      timestamp: new Date(),
+    },
+  ]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-scroll chat
   useEffect(() => {
-    if (status !== 'driving') return;
-    const interval = setInterval(() => {
-      setShowAlert(true);
-      setAlertIdx((p) => (p + 1) % aiAlerts.length);
-      setTimeout(() => setShowAlert(false), 4000);
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [status]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
 
-  // Simulate detection events
-  useEffect(() => {
-    if (status !== 'driving') return;
-    const interval = setInterval(() => {
-      setDetectionFlash(true);
-      setTimeout(() => setDetectionFlash(false), 500);
-    }, 12000);
-    return () => clearInterval(interval);
-  }, [status]);
+  // ── AI_CHATBOT_INTEGRATION POINT ─────────────────────────────
+  // Replace this placeholder function with your real AI API call.
+  // Receives: userMessage (string)
+  // Returns:  { reply: string, routePolyline?: [number,number][] }
+  const callAIChatbot = async (userMessage: string): Promise<string> => {
+    // TODO: Replace with your AI chatbot API call
+    // Example:
+    //   const res = await fetch('/api/route-ai', {
+    //     method: 'POST',
+    //     body: JSON.stringify({ message: userMessage, potholes }),
+    //   });
+    //   const data = await res.json();
+    //   return data.reply;
 
-  // POST-DRIVE REPORT
-  if (status === 'report') {
-    return (
-      <div className="min-h-screen bg-metaverse-grid relative">
-        <MetaverseGrid />
-        <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} transition={{ type: 'spring', damping: 25 }}
-          className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-12">
-          <button onClick={resetDrive} className="absolute top-6 right-6"><X className="w-6 h-6 text-text-secondary hover:text-foreground cursor-pointer" /></button>
-          <HUDLabel className="mb-4">COMMUTE REPORT GENERATED</HUDLabel>
-          <h2 className="text-4xl font-display font-bold text-gradient-cyan mb-8">Mission Complete</h2>
+    // Placeholder response (remove when AI is integrated)
+    await new Promise((r) => setTimeout(r, 1200));
+    if (userMessage.toLowerCase().includes('silk board') || userMessage.toLowerCase().includes('marathahalli')) {
+      return "I found 2 routes for you:\n\n🟢 **Smoothest Route** — Via Outer Ring Road (14.1 km · 34 min)\n   Road score: 9.1/10 · Only 3 potholes\n\n🟠 **Fastest Route** — Via Hosur Road (12.4 km · 28 min)\n   Road score: 6.2/10 · 14 potholes detected\n\n**Recommendation:** Take the Outer Ring Road route. You'll save significant suspension wear.\n\n_Pothole data powered by RoadPulse Digital Twin_";
+    }
+    return "Sure! Please tell me your **starting point** and **destination** in Bengaluru and I'll calculate the best pothole-avoiding route for you.";
+  };
+  // ── END AI_CHATBOT_INTEGRATION POINT ─────────────────────────
 
-          <div className="w-full max-w-md h-48 bg-surface rounded-lg border border-border-glow mb-8 flex items-center justify-center">
-            <span className="text-text-secondary text-xs font-mono">ROUTE MAP · SET MAPBOX TOKEN TO ENABLE</span>
-          </div>
+  const handleSend = async () => {
+    const trimmed = input.trim();
+    if (!trimmed) return;
 
-          <div className="grid grid-cols-2 gap-4 w-full max-w-md mb-8">
+    // Add user message
+    const userMsg: ChatMessage = { role: 'user', text: trimmed, timestamp: new Date() };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput('');
+    setIsTyping(true);
+
+    try {
+      const reply = await callAIChatbot(trimmed);
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        text: reply,
+        timestamp: new Date(),
+      }]);
+    } catch {
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        text: 'Sorry, I had trouble connecting. Please try again.',
+        timestamp: new Date(),
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  };
+
+  // Simple markdown-ish bold renderer
+  const renderText = (text: string) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, i) =>
+      part.startsWith('**') && part.endsWith('**')
+        ? <strong key={i}>{part.slice(2, -2)}</strong>
+        : part.split('\n').map((line, j, arr) => (
+          <span key={j}>{line}{j < arr.length - 1 && <br />}</span>
+        ))
+    );
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: '#f1f5f9', display: 'flex', flexDirection: 'column' }}>
+
+      {/* ── Top header bar ────────────────────────────────────── */}
+      <div style={{
+        height: 52, background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(0,0,0,0.08)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px', flexShrink: 0, zIndex: 100,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%', background: '#2563eb',
+            boxShadow: '0 0 6px rgba(37,99,235,0.6)',
+          }} />
+          <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13, color: '#1e3a8a' }}>
+            ROADPULSE DRIVE
+          </span>
+          <span style={{
+            fontSize: 10, fontFamily: 'monospace', background: 'rgba(37,99,235,0.1)',
+            color: '#2563eb', padding: '2px 8px', borderRadius: 4, fontWeight: 700,
+          }}>
+            {potholes.length} HAZARDS MAPPED
+          </span>
+        </div>
+        {/* Toggle sidebar on mobile */}
+        <button
+          onClick={() => setSidebarOpen(v => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            background: 'none', border: '1px solid rgba(0,0,0,0.1)',
+            borderRadius: 8, padding: '4px 10px', cursor: 'pointer',
+          }}>
+          <Bot size={14} color="#2563eb" />
+          <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#374151' }}>AI Route</span>
+          {sidebarOpen ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+        </button>
+      </div>
+
+      {/* ── Main split layout ─────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
+
+        {/* ── MAP (left / full on mobile when sidebar closed) ── */}
+        <div style={{
+          flex: '1 1 0', position: 'relative',
+          transition: 'all 0.3s ease',
+        }}>
+          <LiveMap
+            potholes={potholes}
+            height="100%"
+            tileMode="light"
+            center={[12.9352, 77.5551]}
+            zoom={13}
+            showPopups={true}
+          />
+
+          {/* Map legend overlay */}
+          <div style={{
+            position: 'absolute', top: 12, left: 12, zIndex: 500,
+            background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
+            borderRadius: 10, padding: '8px 12px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          }}>
+            <p style={{ fontSize: 9, fontFamily: 'monospace', color: '#6b7280', fontWeight: 700, marginBottom: 6 }}>
+              POTHOLE SEVERITY
+            </p>
             {[
-              { label: 'DISTANCE', value: `${tripStats.distance} KM` },
-              { label: 'DURATION', value: `${tripStats.duration} MIN` },
-              { label: 'POTHOLES LOGGED', value: String(tripStats.potholesLogged) },
-              { label: 'TWIN DATA POINTS', value: String(tripStats.dataPoints) },
-            ].map((s) => (
-              <GlassCard key={s.label} className="p-4 text-center" nohover>
-                <p className="font-mono text-lg text-cyan font-bold">{s.value}</p>
-                <p className="text-text-secondary text-[10px] font-mono mt-1">{s.label}</p>
-              </GlassCard>
+              { color: '#ef4444', label: 'High (7–10)' },
+              { color: '#f59e0b', label: 'Medium (4–7)' },
+              { color: '#22c55e', label: 'Low (0–4)' },
+            ].map(({ color, label }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
+                <span style={{ fontSize: 10, color: '#374151' }}>{label}</span>
+              </div>
             ))}
           </div>
 
-          <GlassCard className="w-full max-w-md p-4 border-l-2 border-l-cyan mb-8" nohover>
-            <p className="text-foreground text-sm">Your commute surveyed {tripStats.distance}km of roads and added {tripStats.dataPoints} data points to the city's digital twin.</p>
-            <p className="text-cyan text-sm mt-1">2 auto-complaints queued for BBMP.</p>
-          </GlassCard>
+          {/* Route will be drawn here by AI */}
+          {/* AI_CHATBOT_INTEGRATION: render Polyline component here with routePolyline state */}
+        </div>
 
-          <GlassCard className="w-full max-w-md p-6" nohover>
-            <h4 className="font-display font-semibold text-foreground mb-2">Contribute to the City Twin?</h4>
-            <p className="text-text-secondary text-sm mb-4">Share your anonymised route data to improve Bengaluru's road health map. No personal information is ever shared.</p>
-            <HUDLabel className="mb-4">IDENTITY REMOVED · GPS ANONYMISED · AGGREGATE ONLY</HUDLabel>
-            <div className="flex gap-3 mt-4">
-              <NeonButton variant="primary" className="flex-1" onClick={resetDrive}>SHARE TO TWIN ✓</NeonButton>
-              <NeonButton variant="ghost" className="flex-1" onClick={resetDrive}>Keep Private</NeonButton>
-            </div>
-          </GlassCard>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // ACTIVE DRIVE
-  if (status === 'driving') {
-    return (
-      <div className="min-h-screen bg-metaverse-grid relative">
-        <MetaverseGrid />
+        {/* ── CHATBOT SIDEBAR ──────────────────────────────────── */}
         <AnimatePresence>
-          {detectionFlash && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 border-4 border-alert z-50 pointer-events-none rounded-none" />
+          {sidebarOpen && (
+            <motion.div
+              initial={{ x: '100%', opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              style={{
+                width: 340, flexShrink: 0,
+                background: '#ffffff',
+                borderLeft: '1px solid rgba(0,0,0,0.08)',
+                display: 'flex', flexDirection: 'column',
+                boxShadow: '-4px 0 24px rgba(0,0,0,0.06)',
+                position: 'relative',
+              }}
+            >
+              {/* Sidebar header */}
+              <div style={{
+                padding: '14px 16px', borderBottom: '1px solid rgba(0,0,0,0.06)',
+                display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
+              }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: 10,
+                  background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(37,99,235,0.35)',
+                }}>
+                  <Sparkles size={16} color="white" />
+                </div>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 14, color: '#111827', margin: 0 }}>
+                    AI Route Navigator
+                  </p>
+                  <p style={{ fontSize: 10, color: '#6b7280', fontFamily: 'monospace', margin: 0 }}>
+                    RoadPulse Twin · Pothole-aware routing
+                  </p>
+                </div>
+                <button onClick={() => setSidebarOpen(false)}
+                  style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                  <X size={16} color="#9ca3af" />
+                </button>
+              </div>
+
+              {/* From / To quick inputs */}
+              <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(0,0,0,0.05)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <MapPin size={14} color="#2563eb" />
+                  <input
+                    placeholder="From — e.g. Silk Board"
+                    style={{
+                      flex: 1, padding: '7px 10px', borderRadius: 8, fontSize: 12,
+                      border: '1px solid rgba(0,0,0,0.1)', outline: 'none',
+                      fontFamily: 'inherit', color: '#111827', background: '#f9fafb',
+                    }}
+                    onFocus={(e) => e.target.style.border = '1px solid rgba(37,99,235,0.5)'}
+                    onBlur={(e) => e.target.style.border = '1px solid rgba(0,0,0,0.1)'}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const fromVal = (e.target as HTMLInputElement).value;
+                        const toEl = (e.target as HTMLElement).closest('div')?.nextElementSibling?.querySelector('input');
+                        if (toEl && fromVal) {
+                          const toVal = (toEl as HTMLInputElement).value;
+                          if (toVal) setInput(`From ${fromVal} to ${toVal}`);
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Navigation size={14} color="#6b7280" />
+                  <input
+                    placeholder="To — e.g. Manyata Tech Park"
+                    style={{
+                      flex: 1, padding: '7px 10px', borderRadius: 8, fontSize: 12,
+                      border: '1px solid rgba(0,0,0,0.1)', outline: 'none',
+                      fontFamily: 'inherit', color: '#111827', background: '#f9fafb',
+                    }}
+                    onFocus={(e) => e.target.style.border = '1px solid rgba(37,99,235,0.5)'}
+                    onBlur={(e) => e.target.style.border = '1px solid rgba(0,0,0,0.1)'}
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    const inputs = document.querySelectorAll<HTMLInputElement>('.drive-route-input');
+                    const from = inputs[0]?.value?.trim();
+                    const to = inputs[1]?.value?.trim();
+                    if (from && to) {
+                      setInput(`From ${from} to ${to}`);
+                      setTimeout(() => handleSend(), 50);
+                    }
+                  }}
+                  style={{
+                    marginTop: 8, width: '100%', padding: '8px', borderRadius: 8,
+                    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                    color: 'white', border: 'none', cursor: 'pointer',
+                    fontWeight: 700, fontSize: 12, fontFamily: 'monospace',
+                    boxShadow: '0 2px 8px rgba(37,99,235,0.3)',
+                  }}>
+                  FIND BEST ROUTE →
+                </button>
+              </div>
+
+              {/* Chat messages */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px' }}>
+                {messages.map((msg, idx) => (
+                  <div key={idx} style={{
+                    marginBottom: 12,
+                    display: 'flex',
+                    flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+                    alignItems: 'flex-start', gap: 8,
+                  }}>
+                    {/* Avatar */}
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                      background: msg.role === 'assistant'
+                        ? 'linear-gradient(135deg, #2563eb, #1d4ed8)'
+                        : 'linear-gradient(135deg, #6b7280, #4b5563)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {msg.role === 'assistant'
+                        ? <Bot size={14} color="white" />
+                        : <User size={14} color="white" />}
+                    </div>
+
+                    {/* Bubble */}
+                    <div style={{
+                      maxWidth: '80%',
+                      background: msg.role === 'assistant' ? '#f0f4ff' : '#2563eb',
+                      color: msg.role === 'assistant' ? '#111827' : 'white',
+                      padding: '10px 12px', borderRadius: msg.role === 'assistant'
+                        ? '4px 14px 14px 14px' : '14px 4px 14px 14px',
+                      fontSize: 13, lineHeight: 1.55,
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                    }}>
+                      {renderText(msg.text)}
+                      <p style={{ fontSize: 9, opacity: 0.5, marginTop: 4, fontFamily: 'monospace',
+                        textAlign: msg.role === 'user' ? 'right' : 'left' }}>
+                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Typing indicator */}
+                {isTyping && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Bot size={14} color="white" />
+                    </div>
+                    <div style={{
+                      background: '#f0f4ff', padding: '10px 14px', borderRadius: '4px 14px 14px 14px',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                    }}>
+                      <TypingDots />
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Chat input */}
+              <div style={{
+                padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,0.06)',
+                flexShrink: 0, paddingBottom: 80,
+              }}>
+                <div style={{
+                  display: 'flex', gap: 8, alignItems: 'center',
+                  background: '#f9fafb', borderRadius: 12,
+                  border: '1px solid rgba(0,0,0,0.1)', padding: '6px 6px 6px 12px',
+                }}>
+                  <input
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ask about a route..."
+                    style={{
+                      flex: 1, background: 'none', border: 'none', outline: 'none',
+                      fontSize: 13, color: '#111827', fontFamily: 'inherit',
+                    }}
+                  />
+                  <button
+                    onClick={handleSend}
+                    disabled={!input.trim() || isTyping}
+                    style={{
+                      width: 34, height: 34, borderRadius: 8, border: 'none', cursor: 'pointer',
+                      background: input.trim() && !isTyping
+                        ? 'linear-gradient(135deg, #2563eb, #1d4ed8)'
+                        : '#e5e7eb',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s',
+                      boxShadow: input.trim() && !isTyping ? '0 2px 6px rgba(37,99,235,0.4)' : 'none',
+                    }}>
+                    <Send size={14} color={input.trim() && !isTyping ? 'white' : '#9ca3af'} />
+                  </button>
+                </div>
+                <p style={{ textAlign: 'center', fontSize: 9, color: '#9ca3af', fontFamily: 'monospace', marginTop: 5 }}>
+                  POWERED BY ROADPULSE AI · TWIN DATA v1.0
+                </p>
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
-
-        <div className="relative z-10">
-          {/* Top bar */}
-          <div className="flex justify-between items-center p-4">
-            <HUDLabel>TWIN ACTIVE · SCANNING</HUDLabel>
-            <LiveIndicator />
-          </div>
-
-          {/* Map placeholder */}
-          <div className="mx-4 h-[50vh] bg-surface rounded-lg border border-border-glow flex items-center justify-center relative overflow-hidden">
-            <span className="text-text-secondary text-xs font-mono">NAVIGATION MAP · SET MAPBOX TOKEN</span>
-            {/* Scanning line effect */}
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="w-full h-px bg-gradient-to-r from-transparent via-cyan to-transparent animate-scanning" />
-            </div>
-          </div>
-
-          {/* Speed HUD */}
-          <div className="mx-4 mt-4">
-            <GlassCard className="p-4 flex justify-between items-center" nohover>
-              <div className="text-center">
-                <p className="font-mono text-2xl text-cyan font-bold">42</p>
-                <p className="text-text-secondary text-[10px] font-mono">KM/H</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <SeverityPulse severity="rough" />
-                <span className="font-mono text-sm text-amber">MODERATE</span>
-              </div>
-              <div className="text-center">
-                <p className="font-mono text-lg text-foreground">4.2 km</p>
-                <p className="text-text-secondary text-[10px] font-mono">REMAINING</p>
-              </div>
-            </GlassCard>
-          </div>
-
-          {/* AI Alert */}
-          <AnimatePresence>
-            {showAlert && (
-              <motion.div initial={{ y: -80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -80, opacity: 0 }}
-                className="mx-4 mt-4">
-                <GlassCard className="p-4 border-l-2 border-l-amber" nohover>
-                  <HUDLabel className="mb-2">AI TWIN ADVISORY</HUDLabel>
-                  <p className="text-foreground text-sm">{aiAlerts[alertIdx].message}</p>
-                </GlassCard>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* End Drive */}
-          <div className="mx-4 mt-6 pb-24">
-            <NeonButton variant="secondary" className="w-full border-alert text-alert hover:bg-alert/10" onClick={endDrive}>
-              END DRIVE
-            </NeonButton>
-          </div>
-        </div>
       </div>
-    );
-  }
 
-  // PRE-DRIVE (idle/routing)
-  return (
-    <div className="min-h-screen bg-metaverse-grid relative pb-24">
-      <MetaverseGrid />
-      <div className="relative z-10 p-4">
-        <HUDLabel className="mb-2">TWIN STANDBY</HUDLabel>
-        <h2 className="text-xl font-display font-semibold text-foreground mb-4">Plot Your Route</h2>
+      {/* ── Bottom nav ──────────────────────────────────────────── */}
+      <BottomNav active="drive" />
 
-        <div className="space-y-3 mb-4">
-          <div className="flex items-center gap-3 bg-surface border border-border-glow rounded-lg px-4 py-3">
-            <MapPin className="w-4 h-4 text-cyan" />
-            <span className="text-foreground text-sm">My Location</span>
-          </div>
-          <div className="flex items-center gap-3 bg-surface border border-border-glow rounded-lg px-4 py-3">
-            <Navigation className="w-4 h-4 text-text-secondary" />
-            <input placeholder="Where to?" className="bg-transparent text-foreground placeholder:text-text-secondary text-sm w-full focus:outline-none" />
-          </div>
-        </div>
-
-        {/* Map placeholder */}
-        <div className="h-[35vh] bg-surface rounded-lg border border-border-glow flex items-center justify-center mb-4">
-          <span className="text-text-secondary text-xs font-mono">CITY TWIN MAP · SET MAPBOX TOKEN</span>
-        </div>
-
-        {/* Route options */}
-        <div className="space-y-3 mb-4">
-          <GlassCard className={`p-4 cursor-pointer ${selectedRoute === 'A' ? 'border-cyan/40' : ''}`} onClick={() => selectRoute('A')} nohover>
-            <div className="flex justify-between items-start">
-              <div>
-                <HUDLabel>FASTEST</HUDLabel>
-                <p className="text-foreground text-sm mt-2">12.4 km · 28 min</p>
-              </div>
-              <div className="text-right">
-                <span className="font-mono text-lg text-amber">6.2 / 10</span>
-                <p className="text-text-secondary text-xs">14 potholes</p>
-              </div>
-            </div>
-          </GlassCard>
-
-          <GlassCard className={`p-4 cursor-pointer ${selectedRoute === 'B' ? 'border-cyan/40' : ''}`} onClick={() => selectRoute('B')} nohover>
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-2">
-                  <HUDLabel>SMOOTHEST</HUDLabel>
-                  <span className="text-[10px] bg-green/20 text-green px-2 py-0.5 rounded font-mono">RECOMMENDED</span>
-                </div>
-                <p className="text-foreground text-sm mt-2">14.1 km · 34 min</p>
-              </div>
-              <div className="text-right">
-                <span className="font-mono text-lg text-green">9.1 / 10</span>
-                <p className="text-text-secondary text-xs">3 potholes</p>
-              </div>
-            </div>
-          </GlassCard>
-        </div>
-
-        <NeonButton variant="primary" className="w-full" size="lg" disabled={!selectedRoute} onClick={startDrive}>
-          INITIATE DRIVE
-        </NeonButton>
-      </div>
-      <CitizenBottomNav active="drive" />
+      {/* ── Typing animation keyframes ───────────────────────── */}
+      <style>{`
+        @keyframes typingBounce {
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+          30%            { transform: translateY(-5px); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };

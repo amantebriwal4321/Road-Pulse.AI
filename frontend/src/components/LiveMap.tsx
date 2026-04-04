@@ -1,19 +1,19 @@
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import type { Map as LeafletMap } from 'leaflet';
 import type { PotholeData } from '@/services/api';
 import { markFixed } from '@/services/api';
+import { UserLocationMarker } from '@/components/UserLocationMarker';
 import 'leaflet/dist/leaflet.css';
 
+/** ─── Severity helpers ─────────────────────────────────────── */
 function getSeverityColor(severity: number): string {
-  if (severity >= 9) return '#991b1b';
-  if (severity >= 7) return '#ef4444';
-  if (severity >= 4) return '#f59e0b';
-  return '#22c55e';
+  if (severity >= 7) return '#ef4444'; // red
+  if (severity >= 4) return '#f59e0b'; // amber
+  return '#22c55e';                    // green
 }
 
 function getSeverityLabel(severity: number): string {
-  if (severity >= 9) return 'CRITICAL';
   if (severity >= 7) return 'HIGH';
   if (severity >= 4) return 'MEDIUM';
   return 'LOW';
@@ -23,6 +23,7 @@ function getMarkerRadius(severity: number): number {
   return Math.max(5, Math.min(24, severity * 2.5));
 }
 
+/** ─── Internal sub-components ─────────────────────────────── */
 function MapRefSetter({ onMapRef }: { onMapRef: (map: LeafletMap) => void }) {
   const map = useMap();
   useEffect(() => { onMapRef(map); }, [map, onMapRef]);
@@ -35,6 +36,23 @@ function FlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
   return null;
 }
 
+/** ─── Tile configs ──────────────────────────────────────────── */
+const TILES = {
+  // Clean light map — CartoDB Positron  ← NEW DEFAULT for all citizen views
+  light: {
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CartoDB</a>',
+  },
+  // Dark map — CartoDB DarkMatter (kept for municipality / drive views)
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CartoDB</a>',
+  },
+} as const;
+
+/** ─── Props ─────────────────────────────────────────────────── */
 interface LiveMapProps {
   potholes: PotholeData[];
   height?: string;
@@ -44,8 +62,13 @@ interface LiveMapProps {
   flyToZoom?: number;
   onMapRef?: (map: LeafletMap) => void;
   showPopups?: boolean;
+  /** 'light' = CartoDB Positron (default), 'dark' = CartoDB DarkMatter */
+  tileMode?: 'light' | 'dark';
+  /** If provided, renders a pulsing blue "You Are Here" dot */
+  userLocation?: [number, number] | null;
 }
 
+/** ─── Component ─────────────────────────────────────────────── */
 export function LiveMap({
   potholes,
   height = '100%',
@@ -55,7 +78,11 @@ export function LiveMap({
   flyToZoom = 15,
   onMapRef,
   showPopups = true,
+  tileMode = 'light',          // ← default changed to light
+  userLocation = null,
 }: LiveMapProps) {
+  const tile = TILES[tileMode];
+
   return (
     <MapContainer
       center={center}
@@ -63,14 +90,11 @@ export function LiveMap({
       style={{ height, width: '100%', borderRadius: '0.5rem' }}
       zoomControl={true}
     >
-      <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CartoDB</a>'
-        maxZoom={19}
-      />
+      <TileLayer url={tile.url} attribution={tile.attribution} maxZoom={19} />
 
       {onMapRef ? <MapRefSetter onMapRef={onMapRef} /> : null}
       {flyTo ? <FlyTo center={flyTo} zoom={flyToZoom} /> : null}
+      {userLocation ? <UserLocationMarker coords={userLocation} centerOnFirst /> : null}
 
       {potholes.map((p) => (
         <CircleMarker
@@ -80,7 +104,7 @@ export function LiveMap({
           pathOptions={{
             color: getSeverityColor(p.severity),
             fillColor: getSeverityColor(p.severity),
-            fillOpacity: 0.7,
+            fillOpacity: 0.75,
             weight: 2,
             opacity: 0.9,
           }}
