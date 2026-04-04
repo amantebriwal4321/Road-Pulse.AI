@@ -189,7 +189,6 @@ const CitizenHub = () => {
   const [driveMode, setDriveMode] = useState(false);
   const [proximityAlert, setProximityAlert] = useState<string | null>(null);
   const [mapRef, setMapRef] = useState<LeafletMap | null>(null);
-  const [routeData, setRouteData] = useState<any | null>(null);
   const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Simulator State ──
@@ -202,8 +201,7 @@ const CitizenHub = () => {
   // This ensures the demo works correctly on any laptop anywhere in India.
   const usingDemoLocation =
     coords !== null && !isBengaluru(coords[0], coords[1]);
-
-  let baseCoords: [number, number] | null = coords
+  const baseCoords: [number, number] | null = coords
     ? isBengaluru(coords[0], coords[1])
       ? coords
       : DEMO_LOCATION
@@ -217,116 +215,19 @@ const CitizenHub = () => {
   }, [potholes, simPotholes]);
 
   const advisoryText = useMemo(() => {
-    if (!combinedPotholes.length) return "No active alerts nearby";
-    const critical = combinedPotholes.find((p) => p.severity >= 9);
+    if (!potholes.length) return "No active alerts nearby";
+    const critical = potholes.find((p) => p.severity >= 9);
     if (critical) return `⚠️ Critical cluster · ${critical.ward ?? "Unknown"}`;
-    const high = combinedPotholes.find((p) => p.severity >= 7);
+    const high = potholes.find((p) => p.severity >= 7);
     if (high) return `⚠️ High severity · ${high.ward ?? "Unknown"}`;
-    return `${combinedPotholes.length} potholes tracked · Bengaluru`;
-  }, [combinedPotholes]);
-
-  // ── Simulator Logic ──
-  const startSimulation = useCallback(async () => {
-    if (!baseCoords) return;
-    const [bLat, bLng] = baseCoords;
-    setSimulating(true);
-    setDriveMode(true); // Automatically enter drive mode to watch simulation
-
-    try {
-      // Pick a destination about 5-6km away, mostly straight to encourage main roads
-      const destLat = bLat + 0.05;
-      const destLng = bLng + 0.01;
-      const res = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${bLng},${bLat};${destLng},${destLat}?overview=full&geometries=geojson`,
-      );
-      const data = await res.json();
-
-      if (
-        data.routes &&
-        data.routes[0] &&
-        data.routes[0].geometry.coordinates
-      ) {
-        // OSRM returns geometry as [lng, lat], we need [lat, lng]
-        const rawCoords = data.routes[0].geometry.coordinates.map(
-          (c: number[]) => [c[1], c[0]],
-        );
-
-        // Interpolate OSRM geometry points for smooth movement (~10 meters apart)
-        const smoothCoords: [number, number][] = [];
-        for (let i = 0; i < rawCoords.length - 1; i++) {
-          const p1 = rawCoords[i];
-          const p2 = rawCoords[i + 1];
-          const dist = distanceMeters(p1[0], p1[1], p2[0], p2[1]);
-          const steps = Math.max(1, Math.round(dist / 10)); // step roughly every 10 meters
-          for (let j = 0; j < steps; j++) {
-            smoothCoords.push([
-              p1[0] + (p2[0] - p1[0]) * (j / steps),
-              p1[1] + (p2[1] - p1[1]) * (j / steps),
-            ]);
-          }
-        }
-        if (rawCoords.length > 0)
-          smoothCoords.push(rawCoords[rawCoords.length - 1]);
-
-        setSimRoute(smoothCoords);
-        setSimIndex(0);
-        setSimPotholes([]);
-        return;
-      }
-    } catch (e) {
-      console.error(
-        "Failed to fetch realistic route, falling back to circle",
-        e,
-      );
-    }
-
-    // Fallback to circular route if API fails
-    const pts: [number, number][] = [];
-    const r = 0.003; // small circle
-    for (let i = 0; i < 60; i++) {
-      const ang = (i / 60) * Math.PI * 2;
-      pts.push([bLat + r * Math.sin(ang), bLng + r * Math.cos(ang)]);
-    }
-    setSimRoute(pts);
-    setSimIndex(0);
-    setSimPotholes([]);
-  }, [baseCoords]);
-
-  useEffect(() => {
-    if (!simulating || simIndex >= simRoute.length - 1) {
-      if (simulating && simIndex >= simRoute.length - 1) {
-        setTimeout(() => setSimulating(false), 2000);
-      }
-      return;
-    }
-    const t = setTimeout(() => {
-      setSimIndex((i) => i + 1);
-      // Spawn potholes dynamically on the actual road segment
-      if (Math.random() < 0.02) {
-        // 2% chance per 10m tick ~ 1 pothole per 500m
-        setSimPotholes((prev) => [
-          ...prev,
-          {
-            id: "sim-" + simIndex,
-            lat: simRoute[simIndex][0] + (Math.random() - 0.5) * 0.0001,
-            lng: simRoute[simIndex][1] + (Math.random() - 0.5) * 0.0001,
-            severity: 4 + Math.random() * 6,
-            report_count: 5,
-            status: "open",
-            ward: "Simulation",
-            city: "Bengaluru",
-          },
-        ]);
-      }
-    }, 100); // smooth movement: update every 100ms
-    return () => clearTimeout(t);
-  }, [simulating, simIndex, simRoute]);
+    return `${potholes.length} potholes tracked · Bengaluru`;
+  }, [potholes]);
 
   // ── Proximity detection ──────────────────────────────────────
   const checkProximity = useCallback(() => {
     if (!autoDetect || !effectiveCoords || !combinedPotholes.length) return;
     const [uLat, uLng] = effectiveCoords;
-    const nearby = combinedPotholes
+    const nearby = potholes
       .filter((p) => distanceMeters(uLat, uLng, p.lat, p.lng) < 300)
       .sort((a, b) => b.severity - a.severity);
     if (!nearby.length) return;
@@ -376,7 +277,6 @@ const CitizenHub = () => {
             center={effectiveCoords ?? [12.9716, 77.5946]}
             zoom={16}
             showPopups={false}
-            routeData={routeData}
             onMapRef={setMapRef}
           />
         </div>
@@ -502,7 +402,6 @@ const CitizenHub = () => {
           center={effectiveCoords ?? [12.9716, 77.5946]}
           zoom={13}
           showPopups={true}
-          routeData={routeData}
           onMapRef={setMapRef}
         />
       </div>
@@ -648,31 +547,6 @@ const CitizenHub = () => {
           gap: 10,
         }}
       >
-        {/* Run Simulation */}
-        <button
-          onClick={startSimulation}
-          disabled={simulating || !baseCoords}
-          title="Run Simulation"
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: "50%",
-            background: "rgba(255,255,255,0.95)",
-            border: "1px solid rgba(0,0,0,0.1)",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.15)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: simulating || !baseCoords ? "default" : "pointer",
-          }}
-        >
-          <Play
-            size={20}
-            color={simulating ? "#9ca3af" : "#22c55e"}
-            fill={simulating ? "transparent" : "#22c55e"}
-          />
-        </button>
-
         {/* Centre on me */}
         <button
           onClick={centreOnUser}
