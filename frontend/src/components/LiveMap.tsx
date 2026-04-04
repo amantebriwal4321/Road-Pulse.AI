@@ -5,10 +5,8 @@ import {
   Popup,
   useMap,
   Polyline,
-  Marker,
 } from "react-leaflet";
 import { useEffect, useCallback } from "react";
-import L from "leaflet";
 import type { Map as LeafletMap } from "leaflet";
 import type { PotholeData } from "@/services/api";
 import { markFixed } from "@/services/api";
@@ -31,53 +29,6 @@ function getSeverityLabel(severity: number): string {
 function getMarkerRadius(severity: number): number {
   return Math.max(5, Math.min(24, severity * 2.5));
 }
-
-/** ─── Route Icons ────────────────────────────────────────────── */
-const startIcon = L.divIcon({
-  html: `<div style="
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: #3b82f6;
-    border: 3px solid white;
-    border-radius: 50%;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-  ">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
-    </svg>
-  </div>`,
-  className: "route-start-icon",
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-});
-
-const endIcon = L.divIcon({
-  html: `<div style="
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    background: #ef4444; /* red-500 */
-    border: 3px solid white;
-    border-radius: 50% 50% 50% 0;
-    transform: rotate(-45deg);
-    box-shadow: 2px 4px 10px rgba(0,0,0,0.3);
-  ">
-    <div style="
-      width: 12px;
-      height: 12px;
-      background: white;
-      border-radius: 50%;
-    "></div>
-  </div>`,
-  className: "route-end-icon",
-  iconSize: [36, 36],
-  iconAnchor: [18, 36], // Point at the bottom middle
-});
 
 /** ─── Internal sub-components ─────────────────────────────── */
 function MapRefSetter({ onMapRef }: { onMapRef: (map: LeafletMap) => void }) {
@@ -174,36 +125,17 @@ export function LiveMap({
       {routePath && <RouteFitter routePath={routePath} />}
 
       {routePath && (
-        <>
-          {/* Outer glow/shadow line for visual depth */}
-          <Polyline
-            positions={routePath}
-            pathOptions={{
-              color: "#3b82f6", // Blue glow
-              weight: 12,
-              opacity: 0.3,
-              lineCap: "round",
-              lineJoin: "round",
-            }}
-          />
-          {/* Inner solid bold line */}
-          <Polyline
-            positions={routePath}
-            pathOptions={{
-              color: "#2563eb", // Darker blue core
-              weight: 6,
-              opacity: 0.9,
-              lineCap: "round",
-              lineJoin: "round",
-            }}
-          />
-
-          {/* Start Marker (Navigation Arrow) */}
-          <Marker position={routePath[0]} icon={startIcon} />
-
-          {/* End Marker (Location Pin) */}
-          <Marker position={routePath[routePath.length - 1]} icon={endIcon} />
-        </>
+        <Polyline
+          positions={routePath}
+          pathOptions={{
+            color: "#22d3ee", // Tailwind cyan-400
+            weight: 5,
+            opacity: 0.8,
+            dashArray: "1, 10",
+            lineCap: "round",
+            lineJoin: "round",
+          }}
+        />
       )}
 
       {potholes.map((p) => (
