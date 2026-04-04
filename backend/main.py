@@ -41,15 +41,10 @@ app = FastAPI(
     version="1.0.0",
 )
 
-@app.on_event("startup")
-async def startup_event():
-    """Reset the database on application startup."""
-    logger.info("Resetting Supabase database on backend startup...")
-    success = reset_database()
-    if success:
-        logger.info("Database reset successfully.")
-    else:
-        logger.error("Failed to reset database on startup.")
+
+# NOTE: reset_database() is available via POST /reset endpoint
+# Removed auto-reset on startup to preserve seeded data
+
 
 # CORS — allow all origins (required for frontend on different port)
 app.add_middleware(
