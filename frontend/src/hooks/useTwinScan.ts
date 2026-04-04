@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { reportPothole, type ReportResponse } from "@/services/api";
+import { reportBulkPotholes, type ReportResponse } from "@/services/api";
 
 export interface ScanEvent {
   lat: number;
@@ -26,20 +26,20 @@ export interface TwinScanState {
 const DEVICE_ID = "TWIN-SCAN-LIVE-01";
 
 const ROAD_POINTS = [
-  [12.9168, 77.6230], // Silk Board
-  [12.9140, 77.6252], // HSR
-  [12.9980, 77.5950], // Hebbal
-  [12.9850, 77.6050], // Nagavara
-  [12.9750, 77.6060], // MG Road
-  [12.9720, 77.6100], // Brigade
-  [12.9080, 77.5960], // Jayanagar
-  [13.0100, 77.5700], // Sadashivanagar
-  [13.0050, 77.5500], // Rajajinagar
-  [12.9690, 77.7490], // Whitefield
-  [12.9410, 77.5560], // Mysore Road
-  [12.9340, 77.6260], // Koramangala
-  [12.8450, 77.6600], // Electronic City
-  [12.9700, 77.6499], // Old Airport Road
+  [12.9168, 77.623], // Silk Board
+  [12.914, 77.6252], // HSR
+  [12.998, 77.595], // Hebbal
+  [12.985, 77.605], // Nagavara
+  [12.975, 77.606], // MG Road
+  [12.972, 77.61], // Brigade
+  [12.908, 77.596], // Jayanagar
+  [13.01, 77.57], // Sadashivanagar
+  [13.005, 77.55], // Rajajinagar
+  [12.969, 77.749], // Whitefield
+  [12.941, 77.556], // Mysore Road
+  [12.934, 77.626], // Koramangala
+  [12.845, 77.66], // Electronic City
+  [12.97, 77.6499], // Old Airport Road
 ];
 
 /**
@@ -51,26 +51,19 @@ function jitter(base: number, radiusDeg = 0.00003): number {
   return base + (Math.random() * 2 - 1) * radiusDeg;
 }
 
-// Move the "vehicle" ~80m along a road every N scans
-let scanCount = 0;
-let currentRoadIdx = 0;
-function getMovingBase(base: [number, number]): [number, number] {
-  scanCount++;
-  // Every 8 scans, pick a completely different realistic road location and scatter slightly
-  if (scanCount % 8 === 0) {
-    currentRoadIdx = (currentRoadIdx + 1) % ROAD_POINTS.length;
-    const newBase = ROAD_POINTS[currentRoadIdx];
-    // Add real scatter (like reseed_realistic.py's scatter of 0.0008) to simulate movement along the road
-    return [
-      newBase[0] + (Math.random() * 2 - 1) * 0.0008,
-      newBase[1] + (Math.random() * 2 - 1) * 0.0008
-    ];
-  }
-  return base;
+// Move the "vehicle" to a new random road segment every scan
+function getMovingBase(): [number, number] {
+  // Pick a totally random realistic road location each tick to scatter potholes fast
+  const newBase = ROAD_POINTS[Math.floor(Math.random() * ROAD_POINTS.length)];
+  // Add real scatter (like reseed_realistic.py's scatter of 0.0008) to spread them out
+  return [
+    newBase[0] + (Math.random() * 2 - 1) * 0.0008,
+    newBase[1] + (Math.random() * 2 - 1) * 0.0008,
+  ];
 }
 
 /**
- * useTwinScan — continuously fires POST /report every `intervalMs` ms.
+ * useTwinScan — continuously fires POST /report/bulk every `intervalMs` ms.
  * Each request uses a slightly randomised location around `baseCoords`
  * to simulate a sensor sweeping the surrounding road network.
  *
@@ -79,7 +72,7 @@ function getMovingBase(base: [number, number]): [number, number] {
  */
 export function useTwinScan(
   baseCoords: [number, number] | null,
-  intervalMs = 500,
+  intervalMs = 250,
 ): TwinScanState {
   const [active, setActive] = useState(false);
   const [totalScans, setTotalScans] = useState(0);
@@ -93,11 +86,10 @@ export function useTwinScan(
   const runScan = useCallback(async () => {
     if (!baseCoords) return;
 
-    // Advance the "vehicle" position
-    if (!movingBaseRef.current) movingBaseRef.current = baseCoords;
-    movingBaseRef.current = getMovingBase(movingBaseRef.current);
-    const [baseLat, baseLng] = movingBaseRef.current;
+    // Fast-jump to a brand new random road location every time
+    const [baseLat, baseLng] = getMovingBase();
 
+    // Apply final micro-jitter to the spot
     const lat = jitter(baseLat);
     const lng = jitter(baseLng);
     // Bias severity higher (5–10) so DBSCAN clusters confirm more often in demos
@@ -106,27 +98,31 @@ export function useTwinScan(
 
     let result: ReportResponse;
     try {
-      await reportPothole({
-        lat: jitter(lat, 0.00001),
-        lng: jitter(lng, 0.00001),
-        severity_raw,
-        speed_kmh,
-        device_id: DEVICE_ID + "-A",
-      });
-      await reportPothole({
-        lat: jitter(lat, 0.00001),
-        lng: jitter(lng, 0.00001),
-        severity_raw,
-        speed_kmh,
-        device_id: DEVICE_ID + "-B",
-      });
-      result = await reportPothole({
-        lat: jitter(lat, 0.00001),
-        lng: jitter(lng, 0.00001),
-        severity_raw,
-        speed_kmh,
-        device_id: DEVICE_ID + "-C",
-      });
+      // Send 3 jittered reports in a single bulk HTTP request
+      const responses = await reportBulkPotholes([
+        {
+          lat: jitter(lat, 0.00001),
+          lng: jitter(lng, 0.00001),
+          severity_raw,
+          speed_kmh,
+          device_id: DEVICE_ID + "-A",
+        },
+        {
+          lat: jitter(lat, 0.00001),
+          lng: jitter(lng, 0.00001),
+          severity_raw,
+          speed_kmh,
+          device_id: DEVICE_ID + "-B",
+        },
+        {
+          lat: jitter(lat, 0.00001),
+          lng: jitter(lng, 0.00001),
+          severity_raw,
+          speed_kmh,
+          device_id: DEVICE_ID + "-C",
+        },
+      ]);
+      result = responses[responses.length - 1]; // The final one will contain the confirmed DBSCAN result
     } catch {
       return; // silent — don't break the scan loop on network error
     }
