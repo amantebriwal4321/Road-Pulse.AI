@@ -233,24 +233,51 @@ const CitizenHub = () => {
     setDriveMode(true); // Automatically enter drive mode to watch simulation
 
     try {
-      // Pick a destination about 2km away for a realistic route
-      const destLat = bLat + 0.02;
-      const destLng = bLng + 0.02;
+      // Pick a destination about 5-6km away, mostly straight to encourage main roads
+      const destLat = bLat + 0.05;
+      const destLng = bLng + 0.01;
       const res = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${bLng},${bLat};${destLng},${destLat}?overview=full&geometries=geojson`
+        `https://router.project-osrm.org/route/v1/driving/${bLng},${bLat};${destLng},${destLat}?overview=full&geometries=geojson`,
       );
       const data = await res.json();
-      
-      if (data.routes && data.routes[0] && data.routes[0].geometry.coordinates) {
+
+      if (
+        data.routes &&
+        data.routes[0] &&
+        data.routes[0].geometry.coordinates
+      ) {
         // OSRM returns geometry as [lng, lat], we need [lat, lng]
-        const coords = data.routes[0].geometry.coordinates.map((c: number[]) => [c[1], c[0]]);
-        setSimRoute(coords);
+        const rawCoords = data.routes[0].geometry.coordinates.map(
+          (c: number[]) => [c[1], c[0]],
+        );
+
+        // Interpolate OSRM geometry points for smooth movement (~10 meters apart)
+        const smoothCoords: [number, number][] = [];
+        for (let i = 0; i < rawCoords.length - 1; i++) {
+          const p1 = rawCoords[i];
+          const p2 = rawCoords[i + 1];
+          const dist = distanceMeters(p1[0], p1[1], p2[0], p2[1]);
+          const steps = Math.max(1, Math.round(dist / 10)); // step roughly every 10 meters
+          for (let j = 0; j < steps; j++) {
+            smoothCoords.push([
+              p1[0] + (p2[0] - p1[0]) * (j / steps),
+              p1[1] + (p2[1] - p1[1]) * (j / steps),
+            ]);
+          }
+        }
+        if (rawCoords.length > 0)
+          smoothCoords.push(rawCoords[rawCoords.length - 1]);
+
+        setSimRoute(smoothCoords);
         setSimIndex(0);
         setSimPotholes([]);
         return;
       }
     } catch (e) {
-      console.error("Failed to fetch realistic route, falling back to circle", e);
+      console.error(
+        "Failed to fetch realistic route, falling back to circle",
+        e,
+      );
     }
 
     // Fallback to circular route if API fails
@@ -275,13 +302,14 @@ const CitizenHub = () => {
     const t = setTimeout(() => {
       setSimIndex((i) => i + 1);
       // Spawn potholes dynamically on the actual road segment
-      if (Math.random() < 0.25) {
+      if (Math.random() < 0.02) {
+        // 2% chance per 10m tick ~ 1 pothole per 500m
         setSimPotholes((prev) => [
           ...prev,
           {
             id: "sim-" + simIndex,
-            lat: simRoute[simIndex][0] + (Math.random() - 0.5) * 0.0005,
-            lng: simRoute[simIndex][1] + (Math.random() - 0.5) * 0.0005,
+            lat: simRoute[simIndex][0] + (Math.random() - 0.5) * 0.0001,
+            lng: simRoute[simIndex][1] + (Math.random() - 0.5) * 0.0001,
             severity: 4 + Math.random() * 6,
             report_count: 5,
             status: "open",
@@ -290,7 +318,7 @@ const CitizenHub = () => {
           },
         ]);
       }
-    }, 600); // move every 600ms
+    }, 100); // smooth movement: update every 100ms
     return () => clearTimeout(t);
   }, [simulating, simIndex, simRoute]);
 
