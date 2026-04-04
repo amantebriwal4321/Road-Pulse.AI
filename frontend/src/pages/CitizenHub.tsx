@@ -12,6 +12,16 @@ import {
 } from 'lucide-react';
 import type { Map as LeafletMap } from 'leaflet';
 
+// ─── Hackathon demo location (BGS Flyover / Mysore Road, Bengaluru) ──────────
+// If the device's GPS is detected outside Bengaluru bounds (e.g. Mumbai),
+// this fallback is used so the demo always shows Bengaluru data correctly.
+const DEMO_LOCATION: [number, number] = [12.9408, 77.5551];
+
+/** Bengaluru rough bounding box — anything outside falls back to DEMO_LOCATION */
+function isBengaluru(lat: number, lng: number): boolean {
+  return lat >= 12.7 && lat <= 13.2 && lng >= 77.3 && lng <= 77.9;
+}
+
 // ─── Bottom Nav ────────────────────────────────────────────────
 const BottomNav = ({ active }: { active: string }) => {
   const navigate = useNavigate();
@@ -101,6 +111,13 @@ const CitizenHub = () => {
   const [mapRef, setMapRef] = useState<LeafletMap | null>(null);
   const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Demo fallback: use hardcoded Bengaluru location if GPS is outside city ──
+  // This ensures the demo works correctly on any laptop anywhere in India.
+  const usingDemoLocation = coords !== null && !isBengaluru(coords[0], coords[1]);
+  const effectiveCoords: [number, number] | null = coords
+    ? (isBengaluru(coords[0], coords[1]) ? coords : DEMO_LOCATION)
+    : null;
+
   // ── Advisory text: closest high-severity pothole ─────────────
   const advisoryText = useMemo(() => {
     if (!potholes.length) return 'No active alerts nearby';
@@ -113,8 +130,8 @@ const CitizenHub = () => {
 
   // ── Proximity detection ──────────────────────────────────────
   const checkProximity = useCallback(() => {
-    if (!autoDetect || !coords || !potholes.length) return;
-    const [uLat, uLng] = coords;
+    if (!autoDetect || !effectiveCoords || !potholes.length) return;
+    const [uLat, uLng] = effectiveCoords;
     const nearby = potholes
       .filter(p => distanceMeters(uLat, uLng, p.lat, p.lng) < 300)
       .sort((a, b) => b.severity - a.severity);
@@ -127,7 +144,7 @@ const CitizenHub = () => {
     setProximityAlert(`${label} severity pothole ${dist}m away · ${closest.ward ?? 'Nearby'}`);
     if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
     alertTimerRef.current = setTimeout(() => setProximityAlert(null), 5000);
-  }, [autoDetect, coords, potholes]);
+  }, [autoDetect, effectiveCoords, potholes]);
 
   useEffect(() => {
     if (!autoDetect) return;
@@ -137,8 +154,8 @@ const CitizenHub = () => {
 
   // ── Centre on user ───────────────────────────────────────────
   const centreOnUser = useCallback(() => {
-    if (mapRef && coords) mapRef.flyTo(coords, 16, { duration: 1.2 });
-  }, [mapRef, coords]);
+    if (mapRef && effectiveCoords) mapRef.flyTo(effectiveCoords, 16, { duration: 1.2 });
+  }, [mapRef, effectiveCoords]);
 
   // ── Drive mode: lock orientation / full screen ───────────────
   if (driveMode) {
@@ -150,8 +167,8 @@ const CitizenHub = () => {
             potholes={potholes}
             height="100%"
             tileMode="dark"
-            userLocation={coords}
-            center={coords ?? [12.9716, 77.5946]}
+            userLocation={effectiveCoords}
+            center={effectiveCoords ?? [12.9716, 77.5946]}
             zoom={16}
             showPopups={false}
             onMapRef={setMapRef}
@@ -217,8 +234,8 @@ const CitizenHub = () => {
           potholes={potholes}
           height="100%"
           tileMode="light"
-          userLocation={autoDetect ? coords : null}
-          center={[12.9716, 77.5946]}
+          userLocation={autoDetect ? effectiveCoords : null}
+          center={effectiveCoords ?? [12.9716, 77.5946]}
           zoom={13}
           showPopups={true}
           onMapRef={setMapRef}
@@ -261,15 +278,20 @@ const CitizenHub = () => {
         </button>
       </div>
 
-      {/* ── GPS error notice ── */}
-      {geoError && (
+      {/* ── GPS error or demo-location notice ── */}
+      {(geoError || usingDemoLocation) && (
         <div style={{
           position: 'absolute', top: 60, left: 12, right: 12, zIndex: 1000,
-          background: 'rgba(251,191,36,0.95)', borderRadius: 10, padding: '8px 14px',
+          background: usingDemoLocation ? 'rgba(59,130,246,0.92)' : 'rgba(251,191,36,0.95)',
+          borderRadius: 10, padding: '8px 14px',
           display: 'flex', gap: 8, alignItems: 'center',
         }}>
-          <MapPin size={14} color="#78350f" />
-          <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#78350f' }}>{geoError}</span>
+          <MapPin size={14} color={usingDemoLocation ? 'white' : '#78350f'} />
+          <span style={{ fontSize: 11, fontFamily: 'monospace', color: usingDemoLocation ? 'white' : '#78350f' }}>
+            {usingDemoLocation
+              ? '📍 DEMO LOCATION · BGS Flyover, Bengaluru (GPS outside city)'
+              : geoError}
+          </span>
         </div>
       )}
 
