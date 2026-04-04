@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { LiveMap } from "@/components/LiveMap";
 import { usePotholes } from "@/hooks/usePotholes";
@@ -6,6 +7,18 @@ import { distanceMeters } from "@/lib/haversine";
 import { useNavigate } from "react-router-dom";
 import { HUDLabel } from "@/components/HUDLabel";
 import { motion, AnimatePresence } from "framer-motion";
+=======
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { LiveMap } from '@/components/LiveMap';
+import { usePotholes } from '@/hooks/usePotholes';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { useTwinScan } from '@/hooks/useTwinScan';
+import { TwinScanPanel } from '@/components/TwinScanPanel';
+import { distanceMeters } from '@/lib/haversine';
+import { useNavigate } from 'react-router-dom';
+import { HUDLabel } from '@/components/HUDLabel';
+import { motion, AnimatePresence } from 'framer-motion';
+>>>>>>> Stashed changes
 import {
   LayoutGrid,
   User,
@@ -135,6 +148,7 @@ function ProximityAlert({
 // ─── Twin Advisories pill ─────────────────────────────────────
 function AdvisoryPill({ text }: { text: string }) {
   return (
+<<<<<<< Updated upstream
     <div
       style={{
         position: "absolute",
@@ -176,13 +190,31 @@ function AdvisoryPill({ text }: { text: string }) {
         TWIN ADVISORIES · LIVE
       </span>
       <span style={{ fontSize: 12, color: "#374151" }}>{text}</span>
+=======
+    <div style={{
+      position: 'absolute', bottom: 82, left: 12, right: 12, zIndex: 1000,
+      background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)',
+      border: '1px solid rgba(37,99,235,0.2)', borderRadius: 12,
+      padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 8,
+      boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+    }}>
+      <div style={{
+        width: 7, height: 7, borderRadius: '50%', background: '#2563eb',
+        flexShrink: 0, boxShadow: '0 0 0 3px rgba(37,99,235,0.2)',
+        animation: 'locationPulse 2s ease-out infinite',
+      }} />
+      <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#1e3a8a', flex: 1, fontWeight: 700 }}>
+        TWIN ADVISORIES · LIVE
+      </span>
+      <span style={{ fontSize: 11, color: '#374151' }}>{text}</span>
+>>>>>>> Stashed changes
     </div>
   );
 }
 
 // ─── Main CitizenHub ──────────────────────────────────────────
 const CitizenHub = () => {
-  const { potholes } = usePotholes(8000);
+  const { potholes, refetch } = usePotholes(8000);
   const { coords, error: geoError } = useGeolocation(3000);
   const [autoDetect, setAutoDetect] = useState(true);
   const [driveMode, setDriveMode] = useState(false);
@@ -199,6 +231,16 @@ const CitizenHub = () => {
       ? coords
       : DEMO_LOCATION
     : null;
+
+  // ── Twin Scan: real backend detection ──────────────────────────────
+  const scan = useTwinScan(effectiveCoords ?? DEMO_LOCATION, 3500);
+
+  // Refetch potholes faster while scan is active (new ones may appear)
+  useEffect(() => {
+    if (!scan.active) return;
+    const fast = setInterval(refetch, 4000);
+    return () => clearInterval(fast);
+  }, [scan.active, refetch]);
 
   // ── Advisory text: closest high-severity pothole ─────────────
   const advisoryText = useMemo(() => {
@@ -576,6 +618,15 @@ const CitizenHub = () => {
           <Car size={20} color="white" />
         </button>
       </div>
+
+      {/* ── Twin Scan Panel ── sits left, above the advisory pill ── */}
+      <TwinScanPanel
+        scan={scan}
+        style={{
+          position: 'absolute', left: 12, bottom: 150, zIndex: 1000,
+          maxWidth: 290,
+        }}
+      />
 
       {/* ── Twin Advisories pill ── */}
       <AdvisoryPill text={advisoryText} />

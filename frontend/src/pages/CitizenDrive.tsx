@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import { useState, useRef, useEffect } from "react";
 import { LiveMap } from "@/components/LiveMap";
 import { usePotholes } from "@/hooks/usePotholes";
@@ -18,6 +19,47 @@ import {
   X,
 } from "lucide-react";
 import { Chatbot } from "@/components/Chatbot";
+=======
+/**
+ * CitizenDrive — Route Planner + AI Chatbot Interface
+ *
+ * Layout: Full-screen split view
+ *   [LEFT / TOP on mobile]  → Live Leaflet map with pothole markers
+ *   [RIGHT / BOTTOM sidebar] → AI Route Chatbot
+ *
+ * ── AI_CHATBOT_INTEGRATION POINT ──────────────────────────────
+ * When your AI chatbot is ready, plug it into the `handleSendMessage`
+ * function below. It receives the user's message string and should:
+ *   1. Call your AI route API
+ *   2. Return a text response (shown as a chat bubble)
+ *   3. Optionally return route polyline coords → pass to setRoutePolyline()
+ *      to draw the route on the map
+ * ──────────────────────────────────────────────────────────────
+ */
+
+import { useState, useRef, useEffect } from 'react';
+import { LiveMap }         from '@/components/LiveMap';
+import { usePotholes }     from '@/hooks/usePotholes';
+import { useTwinScan }     from '@/hooks/useTwinScan';
+import { TwinScanPanel }   from '@/components/TwinScanPanel';
+import { useNavigate }     from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Send, Bot, User, MapPin, Navigation,
+  LayoutGrid, Map, ChevronDown, ChevronUp,
+  Sparkles, X,
+} from 'lucide-react';
+
+// Bengaluru demo coords (same as Hub fallback)
+const DRIVE_SCAN_BASE: [number, number] = [12.9408, 77.5551];
+
+// ─── Types ───────────────────────────────────────────────────────
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  text: string;
+  timestamp: Date;
+}
+>>>>>>> Stashed changes
 
 // ─── Bottom Nav ──────────────────────────────────────────────────
 const BottomNav = ({ active }: { active: string }) => {
@@ -83,8 +125,106 @@ const BottomNav = ({ active }: { active: string }) => {
 
 // ─── Main Component ───────────────────────────────────────────────
 const CitizenDrive = () => {
+<<<<<<< Updated upstream
   const { data: potholes = [] } = usePotholes(10000);
   const [routeData, setRouteData] = useState<any | null>(null);
+=======
+  const { potholes, refetch } = usePotholes(10000);
+  const scan = useTwinScan(DRIVE_SCAN_BASE, 3500);
+
+  // Fast refresh while scanning so new confirmed potholes appear quickly
+  useEffect(() => {
+    if (!scan.active) return;
+    const fast = setInterval(refetch, 4000);
+    return () => clearInterval(fast);
+  }, [scan.active, refetch]);
+
+  // ── Chat state ───────────────────────────────────────────────
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: 'assistant',
+      text: "Hi! I'm your RoadPulse AI navigator 🗺️\n\nTell me where you want to go and I'll find the smoothest route — avoiding potholes along the way.\n\nExample: \"From Silk Board to Manyata Tech Park\"",
+      timestamp: new Date(),
+    },
+  ]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isTyping]);
+
+  // ── AI_CHATBOT_INTEGRATION POINT ─────────────────────────────
+  // Replace this placeholder function with your real AI API call.
+  // Receives: userMessage (string)
+  // Returns:  { reply: string, routePolyline?: [number,number][] }
+  const callAIChatbot = async (userMessage: string): Promise<string> => {
+    // TODO: Replace with your AI chatbot API call
+    // Example:
+    //   const res = await fetch('/api/route-ai', {
+    //     method: 'POST',
+    //     body: JSON.stringify({ message: userMessage, potholes }),
+    //   });
+    //   const data = await res.json();
+    //   return data.reply;
+
+    // Placeholder response (remove when AI is integrated)
+    await new Promise((r) => setTimeout(r, 1200));
+    if (userMessage.toLowerCase().includes('silk board') || userMessage.toLowerCase().includes('marathahalli')) {
+      return "I found 2 routes for you:\n\n🟢 **Smoothest Route** — Via Outer Ring Road (14.1 km · 34 min)\n   Road score: 9.1/10 · Only 3 potholes\n\n🟠 **Fastest Route** — Via Hosur Road (12.4 km · 28 min)\n   Road score: 6.2/10 · 14 potholes detected\n\n**Recommendation:** Take the Outer Ring Road route. You'll save significant suspension wear.\n\n_Pothole data powered by RoadPulse Digital Twin_";
+    }
+    return "Sure! Please tell me your **starting point** and **destination** in Bengaluru and I'll calculate the best pothole-avoiding route for you.";
+  };
+  // ── END AI_CHATBOT_INTEGRATION POINT ─────────────────────────
+
+  const handleSend = async () => {
+    const trimmed = input.trim();
+    if (!trimmed) return;
+
+    // Add user message
+    const userMsg: ChatMessage = { role: 'user', text: trimmed, timestamp: new Date() };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput('');
+    setIsTyping(true);
+
+    try {
+      const reply = await callAIChatbot(trimmed);
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        text: reply,
+        timestamp: new Date(),
+      }]);
+    } catch {
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        text: 'Sorry, I had trouble connecting. Please try again.',
+        timestamp: new Date(),
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  };
+
+  // Simple markdown-ish bold renderer
+  const renderText = (text: string) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, i) =>
+      part.startsWith('**') && part.endsWith('**')
+        ? <strong key={i}>{part.slice(2, -2)}</strong>
+        : part.split('\n').map((line, j, arr) => (
+          <span key={j}>{line}{j < arr.length - 1 && <br />}</span>
+        ))
+    );
+  };
+>>>>>>> Stashed changes
 
   return (
     <div
@@ -225,6 +365,19 @@ const CitizenDrive = () => {
               </div>
             ))}
           </div>
+<<<<<<< Updated upstream
+=======
+
+          {/* Route will be drawn here by AI */}
+          {/* AI_CHATBOT_INTEGRATION: render Polyline component here with routePolyline state */}
+
+          {/* ── Twin Scan Panel — top-left, below the legend ── */}
+          <TwinScanPanel
+            scan={scan}
+            compact={true}
+            style={{ position: 'absolute', left: 12, top: 110, zIndex: 500 }}
+          />
+>>>>>>> Stashed changes
         </div>
 
         {/* ── CHATBOT SIDEBAR ──────────────────────────────────── */}

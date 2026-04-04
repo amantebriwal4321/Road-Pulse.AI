@@ -7,6 +7,8 @@ import { SeverityPulse } from "@/components/SeverityPulse";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { LiveMap } from "@/components/LiveMap";
 import { usePotholes } from "@/hooks/usePotholes";
+import { useTwinScan } from "@/hooks/useTwinScan";
+import { TwinScanPanel } from "@/components/TwinScanPanel";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,8 +25,26 @@ const tickerTemplates = [
 
 const MunicipalityMap = () => {
   const navigate = useNavigate();
-  const { potholes } = usePotholes(5000);
+  const { potholes, refetch } = usePotholes(5000);
+  const scan = useTwinScan([12.9716, 77.5946], 3500); // Bengaluru city centre
   const [tickerItems, setTickerItems] = useState<string[]>([]);
+
+  // Fast-refresh potholes when scan is active
+  useEffect(() => {
+    if (!scan.active) return;
+    const fast = setInterval(refetch, 4000);
+    return () => clearInterval(fast);
+  }, [scan.active, refetch]);
+
+  // Pipe scan confirmations into the twin feed ticker
+  useEffect(() => {
+    if (!scan.lastEvent?.confirmed) return;
+    const e = scan.lastEvent;
+    setTickerItems(prev => [
+      `New pothole confirmed — ${e.lat.toFixed(4)},${e.lng.toFixed(4)} (${(e.confidence * 100).toFixed(0)}% conf)`,
+      ...prev.slice(0, 4),
+    ]);
+  }, [scan.lastEvent]);
 
   // Compute live stats
   const stats = useMemo(() => {
@@ -161,6 +181,10 @@ const MunicipalityMap = () => {
               <LiveMap potholes={potholes} height="100%" tileMode="dark" />
               <div className="absolute top-3 left-3 z-[1000]">
                 <HUDLabel className="border-electric-blue/30 text-electric-blue">DIGITAL TWIN · BENGALURU · {potholes.length} POTHOLES</HUDLabel>
+              </div>
+              {/* Twin Scan Panel — sits bottom-right of the map */}
+              <div style={{ position: 'absolute', bottom: 80, right: 16, zIndex: 1000 }}>
+                <TwinScanPanel scan={scan} />
               </div>
             </div>
           </div>
