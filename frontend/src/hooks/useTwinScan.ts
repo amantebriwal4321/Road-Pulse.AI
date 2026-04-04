@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { reportPothole, type ReportResponse } from '@/services/api';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { reportPothole, type ReportResponse } from "@/services/api";
 
 export interface ScanEvent {
   lat: number;
@@ -23,7 +23,7 @@ export interface TwinScanState {
   toggle: () => void;
 }
 
-const DEVICE_ID = 'TWIN-SCAN-LIVE-01';
+const DEVICE_ID = "TWIN-SCAN-LIVE-01";
 
 /**
  * Jitter within DBSCAN clustering radius.
@@ -55,7 +55,7 @@ function getMovingBase(base: [number, number]): [number, number] {
  */
 export function useTwinScan(
   baseCoords: [number, number] | null,
-  intervalMs = 3500,
+  intervalMs = 500,
 ): TwinScanState {
   const [active, setActive] = useState(false);
   const [totalScans, setTotalScans] = useState(0);
@@ -77,12 +77,32 @@ export function useTwinScan(
     const lat = jitter(baseLat);
     const lng = jitter(baseLng);
     // Bias severity higher (5–10) so DBSCAN clusters confirm more often in demos
-    const severity_raw = parseFloat((Math.random() * 5 + 5).toFixed(1));    // 5.0 – 10.0
-    const speed_kmh    = parseFloat((Math.random() * 45 + 10).toFixed(1));  // 10 – 55 km/h
+    const severity_raw = parseFloat((Math.random() * 5 + 5).toFixed(1)); // 5.0 – 10.0
+    const speed_kmh = parseFloat((Math.random() * 45 + 10).toFixed(1)); // 10 – 55 km/h
 
     let result: ReportResponse;
     try {
-      result = await reportPothole({ lat, lng, severity_raw, speed_kmh, device_id: DEVICE_ID });
+      await reportPothole({
+        lat: jitter(lat, 0.00001),
+        lng: jitter(lng, 0.00001),
+        severity_raw,
+        speed_kmh,
+        device_id: DEVICE_ID + "-A",
+      });
+      await reportPothole({
+        lat: jitter(lat, 0.00001),
+        lng: jitter(lng, 0.00001),
+        severity_raw,
+        speed_kmh,
+        device_id: DEVICE_ID + "-B",
+      });
+      result = await reportPothole({
+        lat: jitter(lat, 0.00001),
+        lng: jitter(lng, 0.00001),
+        severity_raw,
+        speed_kmh,
+        device_id: DEVICE_ID + "-C",
+      });
     } catch {
       return; // silent — don't break the scan loop on network error
     }
@@ -98,7 +118,7 @@ export function useTwinScan(
       timestamp: new Date(),
     };
 
-    setTotalScans((n)  => n + 1);
+    setTotalScans((n) => n + 1);
     if (result.pothole_confirmed) setConfirmedPotholes((n) => n + 1);
     setLastEvent(event);
     setLog((prev) => [event, ...prev].slice(0, 20));
@@ -117,9 +137,20 @@ export function useTwinScan(
     };
   }, [active, runScan, intervalMs]);
 
-  const start  = useCallback(() => setActive(true),            []);
-  const stop   = useCallback(() => { setActive(false); },      []);
-  const toggle = useCallback(() => setActive((v) => !v),       []);
+  const start = useCallback(() => setActive(true), []);
+  const stop = useCallback(() => {
+    setActive(false);
+  }, []);
+  const toggle = useCallback(() => setActive((v) => !v), []);
 
-  return { active, totalScans, confirmedPotholes, lastEvent, log, start, stop, toggle };
+  return {
+    active,
+    totalScans,
+    confirmedPotholes,
+    lastEvent,
+    log,
+    start,
+    stop,
+    toggle,
+  };
 }

@@ -42,8 +42,13 @@ app = FastAPI(
 )
 
 
-# NOTE: reset_database() is available via POST /reset endpoint
-# Removed auto-reset on startup to preserve seeded data
+# removed auto-reset on startup to preserve seeded data
+# We'll uncomment it to clear the database perfectly every restart as requested
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Resetting the database to start fresh on this restart...")
+    reset_database()
+
 
 
 # CORS — allow all origins (required for frontend on different port)
