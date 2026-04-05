@@ -5,10 +5,11 @@ import { NeonButton } from "@/components/NeonButton";
 import { aiReports } from "@/data/ai-reports";
 import { usePotholes } from "@/hooks/usePotholes";
 import { useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Globe, FileText, LayoutGrid, Search, Download, Send } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { getLastScanReport, generateScanReport } from "@/lib/generateScanReport";
 
 const volumeData = Array.from({ length: 30 }, (_, i) => ({ day: i + 1, reports: Math.floor(Math.random() * 30) + 10 }));
 
@@ -31,6 +32,16 @@ const MunicipalityReports = () => {
   }, [potholes]);
   const [selectedId, setSelectedId] = useState(aiReports[0].id);
   const selected = aiReports.find((r) => r.id === selectedId)!;
+
+  // Download last simulation PDF (or alert if none exists)
+  const handleDownloadPdf = useCallback(() => {
+    const last = getLastScanReport();
+    if (last) {
+      generateScanReport(last);
+    } else {
+      alert('No scan report available yet. Run a simulation from Citizen Hub first.');
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-metaverse-grid relative pb-24">
@@ -91,7 +102,7 @@ const MunicipalityReports = () => {
               </div>
 
               <div className="flex gap-3 mt-6">
-                <NeonButton variant="primary" className="bg-electric-blue"><Download className="w-4 h-4" /> DOWNLOAD PDF</NeonButton>
+                <NeonButton variant="primary" className="bg-electric-blue" onClick={handleDownloadPdf}><Download className="w-4 h-4" /> DOWNLOAD PDF</NeonButton>
                 <NeonButton variant="secondary" className="border-electric-blue text-electric-blue"><Send className="w-4 h-4" /> FORWARD TO PWD</NeonButton>
               </div>
             </GlassCard>

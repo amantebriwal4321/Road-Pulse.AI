@@ -5,9 +5,10 @@ import { NeonButton } from "@/components/NeonButton";
 import { usePotholes } from "@/hooks/usePotholes";
 import { cityHealthTrend } from "@/data/city-analytics";
 import { useNavigate } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { Globe, FileText, LayoutGrid, Download } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, Cell, ReferenceArea } from "recharts";
+import { getLastScanReport, generateScanReport } from "@/lib/generateScanReport";
 
 const predictedRoads = [
   { road: 'Outer Ring Road — Bellandur', probability: 82 },
@@ -50,6 +51,16 @@ const MunicipalityHub = () => {
       { value: `₹${damagePrevented > 100 ? (damagePrevented / 100).toFixed(1) + 'Cr' : damagePrevented + 'L'}`, label: 'Damage Prevented' },
     ];
   }, [potholes]);
+
+  // Download last simulation PDF
+  const handleDownloadPdf = useCallback(() => {
+    const last = getLastScanReport();
+    if (last) {
+      generateScanReport(last);
+    } else {
+      alert('No scan report available yet. Run a simulation from Citizen Hub first.');
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-metaverse-grid relative pb-24">
@@ -146,7 +157,7 @@ const MunicipalityHub = () => {
         <GlassCard className="p-6" nohover>
           <HUDLabel className="border-electric-blue/30 text-electric-blue mb-4">EXPORT TWIN DATA</HUDLabel>
           <div className="flex flex-wrap gap-3">
-            <NeonButton variant="secondary" className="border-electric-blue text-electric-blue"><Download className="w-4 h-4" /> Monthly Summary PDF</NeonButton>
+            <NeonButton variant="secondary" className="border-electric-blue text-electric-blue" onClick={handleDownloadPdf}><Download className="w-4 h-4" /> Monthly Summary PDF</NeonButton>
             <NeonButton variant="secondary" className="border-electric-blue text-electric-blue"><Download className="w-4 h-4" /> Raw CSV (anonymised)</NeonButton>
             <NeonButton variant="ghost">API Integration Docs</NeonButton>
           </div>

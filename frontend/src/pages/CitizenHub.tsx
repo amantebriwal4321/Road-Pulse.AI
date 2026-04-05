@@ -7,6 +7,7 @@ import { TwinScanPanel } from '@/components/TwinScanPanel';
 import { DriveSim, type DriveSimState } from '@/components/DriveSim';
 import { SimHUD } from '@/components/SimHUD';
 import { distanceMeters } from '@/lib/haversine';
+import { generateScanReport, setLastScanReport } from '@/lib/generateScanReport';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -234,8 +235,22 @@ const CitizenHub = () => {
   }, [autoDetect, checkProximity]);
 
   // ── Sim handlers ───────────────────────────────────────────────
-  const handleStartSim = useCallback(() => setSimActive(true), []);
-  const handleStopSim = useCallback(() => setSimActive(false), []);
+  const simStartRef = useRef<Date | null>(null);
+  const handleStartSim = useCallback(() => {
+    simStartRef.current = new Date();
+    setSimActive(true);
+  }, []);
+  const handleStopSim = useCallback(() => {
+    // Generate PDF report from simulation data
+    const reportData = {
+      simState,
+      startedAt: simStartRef.current ?? new Date(),
+      stoppedAt: new Date(),
+    };
+    setLastScanReport(reportData);   // store for Municipality download
+    generateScanReport(reportData);  // auto-download PDF
+    setSimActive(false);
+  }, [simState]);
 
   // ── Centre on user ─────────────────────────────────────────────
   const centreOnUser = useCallback(() => {
