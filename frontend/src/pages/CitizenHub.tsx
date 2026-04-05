@@ -1,3 +1,4 @@
+import { useThemeStore } from "@/stores/themeStore";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { LiveMap } from "@/components/LiveMap";
 import { usePotholes } from "@/hooks/usePotholes";
@@ -230,7 +231,7 @@ const CitizenHub = () => {
   const { coords, error: geoError } = useGeolocation(3000);
   const navigate = useNavigate();
   const [autoDetect, setAutoDetect] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const { theme, toggle } = useThemeStore();
   const [proximityAlert, setProximityAlert] = useState<string | null>(null);
   const [mapRef, setMapRef] = useState<LeafletMap | null>(null);
   const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -348,7 +349,7 @@ const CitizenHub = () => {
   }, [mapRef, effectiveCoords]);
 
   // ── Shared styles ──────────────────────────────────────────────
-  const d = darkMode;
+  const d = theme === "dark";
   const textPrimary = d ? "#fff" : "#111827";
   const textSecondary = d ? "rgba(255,255,255,0.5)" : "#6b7280";
   const glassBg = d ? "rgba(30,20,20,0.82)" : "rgba(255,255,255,0.85)";
@@ -479,7 +480,7 @@ const CitizenHub = () => {
 
           {/* Theme toggle */}
           <button
-            onClick={() => setDarkMode((v) => !v)}
+            onClick={() => toggle()}
             style={{
               width: 32,
               height: 32,

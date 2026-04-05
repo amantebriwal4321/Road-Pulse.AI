@@ -1,3 +1,4 @@
+import { useThemeStore } from "@/stores/themeStore";
 import { useState, useEffect } from "react";
 import { LiveMap } from "@/components/LiveMap";
 import { usePotholes } from "@/hooks/usePotholes";
@@ -87,7 +88,7 @@ const CitizenDrive = () => {
   const { potholes, refetch } = usePotholes(10000);
   const scan = useTwinScan(DRIVE_SCAN_BASE, 3500);
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
-  const [darkMode, setDarkMode] = useState(true);
+  const { theme, toggle } = useThemeStore();
 
   // Fast refresh while scanning so new confirmed potholes appear quickly
   useEffect(() => {
@@ -96,7 +97,7 @@ const CitizenDrive = () => {
     return () => clearInterval(fast);
   }, [scan.active, refetch]);
 
-  const d = darkMode;
+  const d = theme === "dark";
   const glassBorder = d ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
 
   return (
@@ -161,7 +162,7 @@ const CitizenDrive = () => {
 
         {/* Theme toggle */}
         <button
-          onClick={() => setDarkMode((v) => !v)}
+          onClick={() => toggle()}
           style={{
             width: 32,
             height: 32,
