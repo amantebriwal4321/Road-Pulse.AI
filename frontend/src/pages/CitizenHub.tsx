@@ -234,6 +234,7 @@ const CitizenHub = () => {
   const [proximityAlert, setProximityAlert] = useState<string | null>(null);
   const [mapRef, setMapRef] = useState<LeafletMap | null>(null);
   const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAlertTimeRef = useRef<number>(0);
 
   // ── Simulation state ───────────────────────────────────────────
   const [simActive, setSimActive] = useState(false);
@@ -290,11 +291,19 @@ const CitizenHub = () => {
   // ── Proximity detection ────────────────────────────────────────
   const checkProximity = useCallback(() => {
     if (!autoDetect || !effectiveCoords || !potholes.length) return;
+
+    // Enforce 20 second cooldown between alerts
+    const now = Date.now();
+    if (now - lastAlertTimeRef.current < 20000) return;
+
     const [uLat, uLng] = effectiveCoords;
     const nearby = potholes
       .filter((p) => distanceMeters(uLat, uLng, p.lat, p.lng) < 300)
       .sort((a, b) => b.severity - a.severity);
     if (!nearby.length) return;
+
+    lastAlertTimeRef.current = now;
+
     const closest = nearby[0];
     const dist = Math.round(
       distanceMeters(uLat, uLng, closest.lat, closest.lng),
