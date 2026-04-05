@@ -11,6 +11,7 @@ from typing import Optional
 from pathlib import Path
 from dotenv import load_dotenv
 from supabase import create_client, Client
+from location_utils import get_closest_ward
 
 # Load .env from the same directory as this script
 _env_path = Path(__file__).resolve().parent / ".env"
@@ -179,19 +180,27 @@ def upsert_pothole(
             )
             new_severity = max(0, min(10, new_severity))  # clamp 0–10
 
+            # If existing pothole doesn't have a ward, try to set it
+            update_data = {
+                "severity": new_severity,
+                "report_count": new_count,
+                "last_reported": now,
+            }
+            if existing.get("ward") is None or existing.get("ward") == "Unknown":
+                update_data["ward"] = ward if ward is not None else get_closest_ward(lat, lng)
+
             response = (
                 sb.table("potholes")
-                .update({
-                    "severity": new_severity,
-                    "report_count": new_count,
-                    "last_reported": now,
-                })
+                .update(update_data)
                 .eq("id", existing["id"])
                 .execute()
             )
             return existing["id"]
         else:
             # Insert new pothole
+            if ward is None:
+                ward = get_closest_ward(lat, lng)
+
             response = (
                 sb.table("potholes")
                 .insert({
