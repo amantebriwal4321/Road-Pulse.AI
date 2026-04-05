@@ -52,14 +52,14 @@ const MunicipalityReports = () => {
           <HUDLabel className="border-electric-blue/30 text-electric-blue">TWIN REPORTS</HUDLabel>
           <div className="relative mt-3">
             <Search className="absolute left-3 top-3 w-4 h-4 text-text-secondary" />
-            <input placeholder="Search reports..." className="w-full pl-10 pr-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm focus:outline-none" />
+            <input placeholder="Search reports..." className="w-full pl-10 pr-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm font-medium focus:outline-none" />
           </div>
           {aiReports.map((r) => (
             <GlassCard key={r.id} className={`p-4 cursor-pointer ${selectedId === r.id ? 'border-electric-blue/40' : ''}`}
               onClick={() => setSelectedId(r.id)} nohover>
-              <p className="font-mono text-xs text-cyan">{r.id}</p>
-              <p className="text-foreground text-sm font-display mt-1">{r.roadName}</p>
-              <p className="text-text-secondary text-xs font-mono mt-1">{r.ward} · {r.dateRange}</p>
+              <p className="font-mono text-xs font-medium text-cyan">{r.id}</p>
+              <p className="text-foreground text-sm font-medium font-display mt-1">{r.roadName}</p>
+              <p className="text-text-secondary text-xs font-medium font-mono mt-1">{r.ward} · {r.dateRange}</p>
               <div className="flex gap-2 mt-2">
                 {r.aiProcessed && <span className="text-[9px] bg-cyan/10 text-cyan px-2 py-0.5 rounded font-mono">AI ANALYSED</span>}
                 {r.pdfReady && <span className="text-[9px] bg-green/10 text-green px-2 py-0.5 rounded font-mono">PDF READY</span>}
@@ -72,7 +72,7 @@ const MunicipalityReports = () => {
         <div className="flex-1 p-4 lg:p-8 overflow-y-auto lg:h-screen">
           <HUDLabel className="border-electric-blue/30 text-electric-blue mb-4">TWIN REPORT · {selected.id}</HUDLabel>
           <h2 className="text-2xl font-display font-bold text-foreground mb-1">{selected.roadName}</h2>
-          <p className="text-text-secondary text-sm font-mono mb-6">{selected.ward} · {selected.dateRange} · {selected.evidenceCount} evidence points</p>
+          <p className="text-text-secondary text-sm font-medium font-mono mb-6">{selected.ward} · {selected.dateRange} · {selected.evidenceCount} evidence points</p>
 
           {/* AI Analysis */}
           <motion.div className="mb-8">
@@ -82,22 +82,22 @@ const MunicipalityReports = () => {
 
               <div className="space-y-4">
                 <div>
-                  <p className="text-foreground text-sm leading-relaxed">{selected.analysis}</p>
+                  <p className="text-foreground text-sm font-medium leading-relaxed">{selected.analysis}</p>
                 </div>
                 <div className="glass-card p-3">
-                  <p className="text-alert font-mono text-sm font-bold">PRIORITY ASSESSMENT: {selected.priorityTier}</p>
+                  <p className="text-alert font-mono text-sm font-medium font-bold">PRIORITY ASSESSMENT: {selected.priorityTier}</p>
                 </div>
                 <div>
-                  <p className="text-text-secondary text-xs font-mono mb-1">RECOMMENDED ACTION</p>
-                  <p className="text-foreground text-sm">{selected.recommendedAction}</p>
+                  <p className="text-text-secondary text-xs font-medium font-mono mb-1">RECOMMENDED ACTION</p>
+                  <p className="text-foreground text-sm font-medium">{selected.recommendedAction}</p>
                 </div>
                 <div>
-                  <p className="text-text-secondary text-xs font-mono mb-1">BUDGET ESTIMATE</p>
+                  <p className="text-text-secondary text-xs font-medium font-mono mb-1">BUDGET ESTIMATE</p>
                   <p className="text-cyan font-mono text-lg font-bold">{selected.costEstimate}</p>
                 </div>
                 <div>
-                  <p className="text-text-secondary text-xs font-mono mb-1">SIMILAR RESOLVED CASES</p>
-                  <p className="text-foreground text-sm">{selected.similarCase}</p>
+                  <p className="text-text-secondary text-xs font-medium font-mono mb-1">SIMILAR RESOLVED CASES</p>
+                  <p className="text-foreground text-sm font-medium">{selected.similarCase}</p>
                 </div>
               </div>
 
@@ -111,7 +111,7 @@ const MunicipalityReports = () => {
           {/* Charts */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <GlassCard className="p-4" nohover>
-              <p className="text-text-secondary text-xs font-mono mb-3">REPORT VOLUME — 30 DAYS</p>
+              <p className="text-text-secondary text-xs font-medium font-mono mb-3">REPORT VOLUME — 30 DAYS</p>
               <ResponsiveContainer width="100%" height={150}>
                 <AreaChart data={volumeData}>
                   <defs>
@@ -128,7 +128,7 @@ const MunicipalityReports = () => {
             </GlassCard>
 
             <GlassCard className="p-4" nohover>
-              <p className="text-text-secondary text-xs font-mono mb-3">SEVERITY BREAKDOWN</p>
+              <p className="text-text-secondary text-xs font-medium font-mono mb-3">SEVERITY BREAKDOWN</p>
               <ResponsiveContainer width="100%" height={150}>
                 <PieChart>
                   <Pie data={severityData} cx="50%" cy="50%" outerRadius={55} dataKey="value" stroke="none">

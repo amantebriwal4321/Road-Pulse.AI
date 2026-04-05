@@ -52,7 +52,7 @@ const MunicipalityOnboarding = () => {
         <div className="flex items-center justify-center gap-2 mb-8">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono border ${s <= step ? 'bg-electric-blue/20 border-electric-blue text-electric-blue' : 'border-border-glow text-text-secondary'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium font-mono border ${s <= step ? 'bg-electric-blue/20 border-electric-blue text-electric-blue' : 'border-border-glow text-text-secondary'}`}>
                 {s < step ? <Check className="w-4 h-4" /> : s}
               </div>
               {s < 3 && <div className={`w-8 h-px ${s < step ? 'bg-electric-blue' : 'bg-border-glow'}`} />}
@@ -65,13 +65,13 @@ const MunicipalityOnboarding = () => {
             <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <h3 className="text-xl font-display font-semibold text-foreground mb-4">Register Command Profile</h3>
               <div className="space-y-3">
-                <input placeholder="Full name" className="w-full px-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm focus:outline-none" />
-                <select className="w-full px-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground text-sm focus:outline-none">
+                <input placeholder="Full name" className="w-full px-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm font-medium focus:outline-none" />
+                <select className="w-full px-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground text-sm font-medium focus:outline-none">
                   {designations.map((d) => <option key={d}>{d}</option>)}
                 </select>
-                <input placeholder="Department" className="w-full px-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm focus:outline-none" />
-                <input placeholder="Employee ID" className="w-full px-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm focus:outline-none" />
-                <input placeholder="Phone" className="w-full px-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm focus:outline-none" />
+                <input placeholder="Department" className="w-full px-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm font-medium focus:outline-none" />
+                <input placeholder="Employee ID" className="w-full px-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm font-medium focus:outline-none" />
+                <input placeholder="Phone" className="w-full px-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm font-medium focus:outline-none" />
               </div>
               <NeonButton className="w-full mt-6 bg-electric-blue hover:shadow-[0_0_24px_hsl(var(--electric-blue)/0.4)]" onClick={() => setStep(2)}>Continue →</NeonButton>
             </motion.div>
@@ -80,12 +80,12 @@ const MunicipalityOnboarding = () => {
           {step === 2 && (
             <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <h3 className="text-xl font-display font-semibold text-foreground mb-1">Define Your City Sector</h3>
-              <p className="text-text-secondary text-sm mb-4">Your digital twin will be filtered to your jurisdiction.</p>
+              <p className="text-text-secondary text-sm font-medium mb-4">Your digital twin will be filtered to your jurisdiction.</p>
 
               <div className="flex gap-2 mb-4">
                 {['Ward', 'Zone', 'City'].map((l) => (
                   <button key={l} onClick={() => setJurisdictionLevel(l.toLowerCase())}
-                    className={`flex-1 py-3 rounded-lg border text-sm transition-all cursor-pointer ${jurisdictionLevel === l.toLowerCase() ? 'border-electric-blue bg-electric-blue/10 text-electric-blue' : 'border-border-glow text-text-secondary'}`}>
+                    className={`flex-1 py-3 rounded-lg border text-sm font-medium transition-all cursor-pointer ${jurisdictionLevel === l.toLowerCase() ? 'border-electric-blue bg-electric-blue/10 text-electric-blue' : 'border-border-glow text-text-secondary'}`}>
                     {l}
                   </button>
                 ))}
@@ -94,7 +94,7 @@ const MunicipalityOnboarding = () => {
               <div className="flex flex-wrap gap-2 mb-4">
                 {wardNames.map((w) => (
                   <button key={w} onClick={() => toggleWard(w)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-mono border transition-all cursor-pointer ${selectedWards.includes(w) ? 'border-electric-blue bg-electric-blue/10 text-electric-blue' : 'border-border-glow text-text-secondary'}`}>
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium font-mono border transition-all cursor-pointer ${selectedWards.includes(w) ? 'border-electric-blue bg-electric-blue/10 text-electric-blue' : 'border-border-glow text-text-secondary'}`}>
                     {w}
                   </button>
                 ))}
@@ -110,19 +110,19 @@ const MunicipalityOnboarding = () => {
 
               <div className="space-y-5 mb-6">
                 <div>
-                  <p className="text-sm text-foreground mb-2">Alert me when potholes exceed severity</p>
+                  <p className="text-sm font-medium text-foreground mb-2">Alert me when potholes exceed severity</p>
                   <input type="range" min="1" max="10" defaultValue="7" className="w-full accent-[hsl(var(--electric-blue))]" />
                   <div className="flex justify-between text-[10px] font-mono text-text-secondary"><span>1</span><span>10</span></div>
                 </div>
                 <div>
-                  <p className="text-sm text-foreground mb-2">Emergency dispatch threshold</p>
+                  <p className="text-sm font-medium text-foreground mb-2">Emergency dispatch threshold</p>
                   <input type="range" min="1" max="10" defaultValue="8" className="w-full accent-[hsl(var(--electric-blue))]" />
                 </div>
                 <div>
-                  <p className="text-sm text-foreground mb-2">Report frequency</p>
+                  <p className="text-sm font-medium text-foreground mb-2">Report frequency</p>
                   <div className="flex gap-2">
                     {['Daily', 'Weekly', 'Monthly'].map((f) => (
-                      <button key={f} className="flex-1 py-2 rounded-lg border border-border-glow text-text-secondary text-sm hover:border-electric-blue hover:text-electric-blue transition-all cursor-pointer">{f}</button>
+                      <button key={f} className="flex-1 py-2 rounded-lg border border-border-glow text-text-secondary text-sm font-medium hover:border-electric-blue hover:text-electric-blue transition-all cursor-pointer">{f}</button>
                     ))}
                   </div>
                 </div>

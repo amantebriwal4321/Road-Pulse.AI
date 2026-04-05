@@ -26,13 +26,13 @@ const MunicipalityLogin = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="relative">
             <Shield className="absolute left-3 top-3 w-4 h-4 text-text-secondary" />
-            <input {...register('govId')} placeholder="Government ID" className="w-full pl-10 pr-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm focus:outline-none focus:border-electric-blue/50" />
+            <input {...register('govId')} placeholder="Government ID" className="w-full pl-10 pr-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm font-medium focus:outline-none focus:border-electric-blue/50" />
           </div>
           <div className="relative">
             <Mail className="absolute left-3 top-3 w-4 h-4 text-text-secondary" />
-            <input {...register('email')} type="email" placeholder="Official Email" className="w-full pl-10 pr-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm focus:outline-none focus:border-electric-blue/50" />
+            <input {...register('email')} type="email" placeholder="Official Email" className="w-full pl-10 pr-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm font-medium focus:outline-none focus:border-electric-blue/50" />
           </div>
-          <input {...register('org')} placeholder="Organisation name" className="w-full px-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm focus:outline-none focus:border-electric-blue/50" />
+          <input {...register('org')} placeholder="Organisation name" className="w-full px-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary text-sm font-medium focus:outline-none focus:border-electric-blue/50" />
 
           {!otpSent ? (
             <NeonButton type="button" variant="secondary" className="w-full border-electric-blue text-electric-blue hover:bg-electric-blue/10" onClick={() => setOtpSent(true)}>
@@ -51,7 +51,7 @@ const MunicipalityLogin = () => {
           </NeonButton>
         </form>
 
-        <p className="text-center text-sm text-text-secondary mt-4">
+        <p className="text-center text-sm font-medium text-text-secondary mt-4">
           <button onClick={() => navigate('/municipality/onboarding')} className="text-electric-blue hover:underline cursor-pointer">
             Register new authority profile →
           </button>

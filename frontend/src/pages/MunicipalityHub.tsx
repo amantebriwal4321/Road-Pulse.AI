@@ -98,7 +98,7 @@ const MunicipalityHub = () => {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-text-secondary text-sm font-mono text-center py-8">Loading live ward data...</p>
+            <p className="text-text-secondary text-sm font-medium font-mono text-center py-8">Loading live ward data...</p>
           )}
         </GlassCard>
 
@@ -109,12 +109,12 @@ const MunicipalityHub = () => {
             <div className="space-y-3">
               {predictedRoads.map((r) => (
                 <div key={r.road} className="flex items-center justify-between">
-                  <span className="text-foreground text-sm truncate flex-1 mr-3">{r.road}</span>
+                  <span className="text-foreground text-sm font-medium truncate flex-1 mr-3">{r.road}</span>
                   <div className="flex items-center gap-2">
                     <div className="w-20 h-2 bg-surface rounded-full overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${r.probability}%`, backgroundColor: r.probability > 70 ? '#FF3D57' : r.probability > 50 ? '#FFB300' : '#00E676' }} />
                     </div>
-                    <span className="font-mono text-xs text-alert w-10 text-right">{r.probability}%</span>
+                    <span className="font-mono text-xs font-medium text-alert w-10 text-right">{r.probability}%</span>
                   </div>
                 </div>
               ))}
@@ -136,7 +136,7 @@ const MunicipalityHub = () => {
                 </div>
               </div>
             </div>
-            <p className="text-center text-text-secondary text-xs font-mono">City Monsoon Preparedness Score</p>
+            <p className="text-center text-text-secondary text-xs font-medium font-mono">City Monsoon Preparedness Score</p>
           </GlassCard>
         </div>
 

@@ -28,12 +28,12 @@ const CitizenLogin = () => {
           <div className="relative">
             <Mail className="absolute left-3 top-3 w-4 h-4 text-text-secondary" />
             <input {...register('email')} type="email" placeholder="Email address"
-              className="w-full pl-10 pr-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary font-display text-sm focus:outline-none focus:border-cyan/50" />
+              className="w-full pl-10 pr-4 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary font-display text-sm focus:outline-none focus:border-primary/50" />
           </div>
           <div className="relative">
             <Lock className="absolute left-3 top-3 w-4 h-4 text-text-secondary" />
             <input {...register('password')} type={showPassword ? 'text' : 'password'} placeholder="Password"
-              className="w-full pl-10 pr-10 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary font-display text-sm focus:outline-none focus:border-cyan/50" />
+              className="w-full pl-10 pr-10 py-3 bg-surface border border-border-glow rounded-lg text-foreground placeholder:text-text-secondary font-display text-sm focus:outline-none focus:border-primary/50" />
             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3">
               {showPassword ? <EyeOff className="w-4 h-4 text-text-secondary" /> : <Eye className="w-4 h-4 text-text-secondary" />}
             </button>
@@ -52,7 +52,7 @@ const CitizenLogin = () => {
 
         <p className="text-center text-sm text-text-secondary">
           New to RoadPulse?{' '}
-          <button onClick={() => navigate('/citizen/onboarding')} className="text-cyan hover:underline cursor-pointer">
+          <button onClick={() => navigate('/citizen/onboarding')} className="text-primary hover:underline cursor-pointer">
             Create profile →
           </button>
         </p>

@@ -103,7 +103,7 @@ const MunicipalityMap = () => {
             <HUDLabel className="border-electric-blue/30 text-electric-blue">CITY TWIN · LIVE</HUDLabel>
             <LiveIndicator />
           </div>
-          <div className="font-mono text-sm text-text-secondary hidden md:block">
+          <div className="font-mono text-sm font-medium text-text-secondary hidden md:block">
             BENGALURU · {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
           </div>
           <div className="flex items-center gap-3">
@@ -121,9 +121,9 @@ const MunicipalityMap = () => {
               <div className="space-y-2 mt-3">
                 {stats.map((m) => (
                   <div key={m.label} className="flex items-center justify-between">
-                    <span className="text-text-secondary text-xs">{m.label}</span>
+                    <span className="text-text-secondary text-xs font-medium">{m.label}</span>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm text-cyan font-bold">{m.value}</span>
+                      <span className="font-mono text-sm font-medium text-cyan font-bold">{m.value}</span>
                       <span className={`text-[10px] font-mono flex items-center ${m.up ? 'text-alert' : 'text-green'}`}>
                         {m.up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                         {m.trend}
@@ -143,12 +143,12 @@ const MunicipalityMap = () => {
                     <div className="flex items-start gap-2">
                       <SeverityPulse severity="critical" size="sm" className="mt-1" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-foreground text-sm font-display truncate">{e.roadName}</p>
+                        <p className="text-foreground text-sm font-medium font-display truncate">{e.roadName}</p>
                         <p className="text-text-secondary text-[10px] font-mono">{e.ward} · {e.severityScore.toFixed(1)} · {e.reportCount} reports</p>
                       </div>
                     </div>
                     {!dispatchedIds.has(e.id) ? (
-                      <NeonButton size="sm" variant="primary" className="w-full mt-2 bg-alert hover:shadow-[0_0_16px_hsl(var(--alert)/0.4)] text-xs"
+                      <NeonButton size="sm" variant="primary" className="w-full mt-2 bg-alert hover:shadow-[0_0_16px_hsl(var(--alert)/0.4)] text-xs font-medium"
                         onClick={() => setDispatchedIds(prev => new Set(prev).add(e.id))}>DISPATCH</NeonButton>
                     ) : (
                       <HUDLabel className="mt-2 border-amber/30 text-amber">CREW DISPATCHED</HUDLabel>
@@ -165,7 +165,7 @@ const MunicipalityMap = () => {
                 <AnimatePresence>
                   {tickerItems.map((t, i) => (
                     <motion.div key={`${t}-${i}`} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-                      className="glass-card p-2 border-l-2 border-l-electric-blue text-xs text-foreground">
+                      className="glass-card p-2 border-l-2 border-l-electric-blue text-xs font-medium text-foreground">
                       {t}
                       <p className="text-text-secondary text-[9px] font-mono mt-1">{i === 0 ? 'Just now' : `${i * 5}m ago`}</p>
                     </motion.div>

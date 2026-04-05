@@ -33,14 +33,14 @@ const CitizenProfile = () => {
       <div className="relative z-10 p-4">
         {/* Header */}
         <div className="flex flex-col items-center mb-6">
-          <div className="w-20 h-20 rounded-full bg-cyan/20 border-2 border-cyan flex items-center justify-center mb-3">
-            <span className="text-cyan font-display font-bold text-2xl">AK</span>
+          <div className="w-20 h-20 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center mb-3">
+            <span className="text-primary font-display font-bold text-2xl">AK</span>
           </div>
           <h2 className="text-xl font-display font-bold text-foreground">Arjun Kumar</h2>
           <HUDLabel className="mt-2">TWIN ID: RPC-4821</HUDLabel>
           <div className="mt-2 flex items-center gap-2">
-            <Shield className="w-4 h-4 text-cyan" />
-            <span className="text-cyan font-mono text-sm font-semibold">GUARDIAN</span>
+            <Shield className="w-4 h-4 text-primary" />
+            <span className="text-primary font-mono text-sm font-semibold">GUARDIAN</span>
           </div>
         </div>
 
@@ -52,7 +52,7 @@ const CitizenProfile = () => {
               <p className="text-foreground text-sm font-display">Sedan · Honda City</p>
               <HUDLabel className="mt-1">CALIBRATED · ±0.04g</HUDLabel>
             </div>
-            <button className="text-cyan text-xs font-mono cursor-pointer hover:underline">Edit</button>
+            <button className="text-primary text-xs font-mono cursor-pointer hover:underline">Edit</button>
           </div>
         </GlassCard>
 
@@ -67,7 +67,7 @@ const CitizenProfile = () => {
             { value: String(stats.reportsShared), label: 'REPORTS' },
           ].map((s) => (
             <GlassCard key={s.label} className="p-3 text-center" nohover>
-              <p className="font-mono text-sm text-cyan font-bold">{s.value}</p>
+              <p className="font-mono text-sm text-primary font-bold">{s.value}</p>
               <p className="text-text-secondary text-[9px] font-mono mt-1">{s.label}</p>
             </GlassCard>
           ))}
@@ -78,8 +78,8 @@ const CitizenProfile = () => {
         <div className="flex gap-3 overflow-x-auto pb-2 mt-3 mb-4">
           {badges.map((b) => (
             <div key={b.name} className={`flex-shrink-0 w-20 flex flex-col items-center gap-1 ${b.earned ? '' : 'opacity-40'}`}>
-              <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center ${b.earned ? 'border-cyan bg-cyan/10 shadow-[0_0_12px_hsl(var(--cyan)/0.3)]' : 'border-border-glow'}`}>
-                {b.earned ? <Shield className="w-6 h-6 text-cyan" /> : <Lock className="w-4 h-4 text-text-secondary" />}
+              <div className={`w-14 h-14 rounded-full border-2 flex items-center justify-center ${b.earned ? 'border-primary bg-primary/10 shadow-[0_0_12px_hsl(var(--primary)/0.3)]' : 'border-border-glow'}`}>
+                {b.earned ? <Shield className="w-6 h-6 text-primary" /> : <Lock className="w-4 h-4 text-text-secondary" />}
               </div>
               <span className="text-[9px] font-mono text-text-secondary text-center">{b.name}</span>
             </div>
@@ -113,7 +113,7 @@ const CitizenProfile = () => {
             { id: 'profile', label: 'Profile', icon: User, path: '/citizen/profile' },
           ].map((item) => (
             <button key={item.id} onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${item.id === 'profile' ? 'text-cyan' : 'text-text-secondary hover:text-foreground'}`}>
+              className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${item.id === 'profile' ? 'text-primary' : 'text-text-secondary hover:text-foreground'}`}>
               <item.icon className="w-5 h-5" />
               <span className="text-[10px] font-mono">{item.label}</span>
             </button>

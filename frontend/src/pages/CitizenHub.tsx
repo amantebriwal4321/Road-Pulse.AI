@@ -58,7 +58,7 @@ function BottomNav({
     <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-[1200]">
       <div
         style={{
-          background: dark ? "rgba(15,23,42,0.88)" : "rgba(255,255,255,0.92)",
+          background: dark ? "rgba(30,20,20,0.88)" : "rgba(255,255,255,0.92)",
           backdropFilter: "blur(20px)",
           border: `1px solid ${dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
           borderRadius: 9999,
@@ -84,7 +84,7 @@ function BottomNav({
               background: "transparent",
               color:
                 item.id === active
-                  ? "#2563eb"
+                  ? "hsl(var(--primary))"
                   : dark
                     ? "rgba(255,255,255,0.4)"
                     : "#9ca3af",
@@ -342,7 +342,7 @@ const CitizenHub = () => {
   const d = darkMode;
   const textPrimary = d ? "#fff" : "#111827";
   const textSecondary = d ? "rgba(255,255,255,0.5)" : "#6b7280";
-  const glassBg = d ? "rgba(15,23,42,0.82)" : "rgba(255,255,255,0.85)";
+  const glassBg = d ? "rgba(30,20,20,0.82)" : "rgba(255,255,255,0.85)";
   const glassBorder = d ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
 
   /* ═══════════════════════════════════════════════════════════════
@@ -353,7 +353,7 @@ const CitizenHub = () => {
       style={{
         position: "fixed",
         inset: 0,
-        background: d ? "#0f172a" : "#f8fafc",
+        background: d ? "hsl(var(--void))" : "#f8fafc",
       }}
     >
       {/* ── Full-screen map ──────────────────────────────────────── */}
@@ -392,7 +392,7 @@ const CitizenHub = () => {
             zIndex: 1100,
             padding: "10px 14px 12px",
             background: d
-              ? "linear-gradient(to bottom, rgba(15,23,42,0.95) 0%, transparent 100%)"
+              ? "linear-gradient(to bottom, rgba(30,20,20,0.95) 0%, transparent 100%)"
               : "linear-gradient(to bottom, rgba(248,250,252,0.97) 0%, transparent 100%)",
             display: "flex",
             alignItems: "center",
@@ -499,22 +499,22 @@ const CitizenHub = () => {
               gap: 4,
               cursor: "pointer",
               background: autoDetect
-                ? "rgba(37,99,235,0.12)"
+                ? "hsl(var(--primary),0.12)"
                 : d
                   ? "rgba(255,255,255,0.06)"
                   : "rgba(156,163,175,0.1)",
-              border: `1px solid ${autoDetect ? "rgba(37,99,235,0.3)" : glassBorder}`,
+              border: `1px solid ${autoDetect ? "hsl(var(--primary),0.3)" : glassBorder}`,
               borderRadius: 8,
               padding: "5px 8px",
             }}
           >
-            <Radio size={12} color={autoDetect ? "#2563eb" : textSecondary} />
+            <Radio size={12} color={autoDetect ? "hsl(var(--primary))" : textSecondary} />
             <span
               style={{
                 fontFamily: "monospace",
                 fontSize: 8,
                 fontWeight: 700,
-                color: autoDetect ? "#2563eb" : textSecondary,
+                color: autoDetect ? "hsl(var(--primary))" : textSecondary,
               }}
             >
               {autoDetect ? "DETECT ON" : "OFF"}
@@ -607,7 +607,7 @@ const CitizenHub = () => {
             cursor: coords ? "pointer" : "default",
           }}
         >
-          <Locate size={18} color={coords ? "#2563eb" : textSecondary} />
+          <Locate size={18} color={coords ? "hsl(var(--primary))" : textSecondary} />
         </button>
         <button
           onClick={() => navigate("/municipality")}
@@ -709,8 +709,8 @@ const CitizenHub = () => {
             flexShrink: 0,
             background: potholes.some((p) => p.severity >= 7)
               ? "#ef4444"
-              : "#2563eb",
-            boxShadow: `0 0 0 2px ${potholes.some((p) => p.severity >= 7) ? "rgba(239,68,68,0.2)" : "rgba(37,99,235,0.2)"}`,
+              : "hsl(var(--primary))",
+            boxShadow: `0 0 0 2px ${potholes.some((p) => p.severity >= 7) ? "rgba(239,68,68,0.2)" : "hsl(var(--primary),0.2)"}`,
             animation: "locationPulse 2s ease-out infinite",
           }}
         />
