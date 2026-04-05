@@ -55,11 +55,8 @@ function jitter(base: number, radiusDeg = 0.00003): number {
 function getMovingBase(): [number, number] {
   // Pick a totally random realistic road location each tick to scatter potholes fast
   const newBase = ROAD_POINTS[Math.floor(Math.random() * ROAD_POINTS.length)];
-  // Add real scatter (like reseed_realistic.py's scatter of 0.02) to spread them out
-  return [
-    newBase[0] + (Math.random() * 2 - 1) * 0.02,
-    newBase[1] + (Math.random() * 2 - 1) * 0.02,
-  ];
+  // No deep scatter, so they plot right on the known intersections/roads
+  return [newBase[0], newBase[1]];
 }
 
 /**
