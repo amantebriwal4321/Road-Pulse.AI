@@ -4,6 +4,7 @@ import {
   CircleMarker,
   Popup,
   useMap,
+  ZoomControl,
 } from "react-leaflet";
 import { useEffect, useCallback, type ReactNode } from "react";
 import type { Map as LeafletMap } from "leaflet";
@@ -106,8 +107,9 @@ export function LiveMap({
       center={center}
       zoom={zoom}
       style={{ height, width: "100%", borderRadius: "0.5rem" }}
-      zoomControl={true}
+      zoomControl={false}
     >
+      <ZoomControl position="bottomright" />
       <TileLayer url={tile.url} attribution={tile.attribution} maxZoom={19} />
 
       {onMapRef ? <MapRefSetter onMapRef={onMapRef} /> : null}
