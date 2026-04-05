@@ -19,7 +19,7 @@ from location_utils import ROAD_POINTS
 # Scatter is applied per-road so markers follow road patterns, not grids
 # ---------------------------------------------------------------------------
 
-def scatter(val: float, road_scatter: float = 0.005) -> float:
+def scatter(val: float, road_scatter: float = 0.02) -> float:
     """Add slight scatter to simulate potholes along a road (not exactly on the point)."""
     return round(val + random.uniform(-road_scatter, road_scatter), 6)
 
