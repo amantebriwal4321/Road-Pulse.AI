@@ -1,11 +1,11 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const api = axios.create({
   baseURL: API_BASE,
   timeout: 5000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { "Content-Type": "application/json" },
 });
 
 export interface PotholeData {
@@ -38,14 +38,23 @@ export interface ReportResponse {
 }
 
 export async function getPotholes(minSeverity = 0): Promise<PotholeData[]> {
-  const res = await api.get<PotholeData[]>('/potholes', {
+  const res = await api.get<PotholeData[]>("/potholes", {
     params: { min_severity: minSeverity },
   });
   return res.data;
 }
 
-export async function reportPothole(data: ReportRequest): Promise<ReportResponse> {
-  const res = await api.post<ReportResponse>('/report', data);
+export async function reportPothole(
+  data: ReportRequest,
+): Promise<ReportResponse> {
+  const res = await api.post<ReportResponse>("/report", data);
+  return res.data;
+}
+
+export async function reportBulkPotholes(
+  data: ReportRequest[],
+): Promise<ReportResponse[]> {
+  const res = await api.post<ReportResponse[]>("/report/bulk", data);
   return res.data;
 }
 

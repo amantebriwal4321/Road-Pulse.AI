@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { reportPothole, type ReportResponse } from '@/services/api';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { reportBulkPotholes, type ReportResponse } from "@/services/api";
 
 export interface ScanEvent {
   lat: number;
@@ -23,7 +23,24 @@ export interface TwinScanState {
   toggle: () => void;
 }
 
-const DEVICE_ID = 'TWIN-SCAN-LIVE-01';
+const DEVICE_ID = "TWIN-SCAN-LIVE-01";
+
+const ROAD_POINTS = [
+  [12.9168, 77.623], // Silk Board
+  [12.914, 77.6252], // HSR
+  [12.998, 77.595], // Hebbal
+  [12.985, 77.605], // Nagavara
+  [12.975, 77.606], // MG Road
+  [12.972, 77.61], // Brigade
+  [12.908, 77.596], // Jayanagar
+  [13.01, 77.57], // Sadashivanagar
+  [13.005, 77.55], // Rajajinagar
+  [12.969, 77.749], // Whitefield
+  [12.941, 77.556], // Mysore Road
+  [12.934, 77.626], // Koramangala
+  [12.845, 77.66], // Electronic City
+  [12.97, 77.6499], // Old Airport Road
+];
 
 /**
  * Jitter within DBSCAN clustering radius.
@@ -34,19 +51,19 @@ function jitter(base: number, radiusDeg = 0.00003): number {
   return base + (Math.random() * 2 - 1) * radiusDeg;
 }
 
-// Move the "vehicle" ~80m along a road every N scans
-let scanCount = 0;
-function getMovingBase(base: [number, number]): [number, number] {
-  scanCount++;
-  if (scanCount % 8 === 0) {
-    // Shift ~80m north-east to simulate driving
-    return [base[0] + 0.0007, base[1] + 0.0007];
-  }
-  return base;
+// Move the "vehicle" to a new random road segment every scan
+function getMovingBase(): [number, number] {
+  // Pick a totally random realistic road location each tick to scatter potholes fast
+  const newBase = ROAD_POINTS[Math.floor(Math.random() * ROAD_POINTS.length)];
+  // Add real scatter (like reseed_realistic.py's scatter of 0.0008) to spread them out
+  return [
+    newBase[0] + (Math.random() * 2 - 1) * 0.0008,
+    newBase[1] + (Math.random() * 2 - 1) * 0.0008,
+  ];
 }
 
 /**
- * useTwinScan — continuously fires POST /report every `intervalMs` ms.
+ * useTwinScan — continuously fires POST /report/bulk every `intervalMs` ms.
  * Each request uses a slightly randomised location around `baseCoords`
  * to simulate a sensor sweeping the surrounding road network.
  *
@@ -55,7 +72,7 @@ function getMovingBase(base: [number, number]): [number, number] {
  */
 export function useTwinScan(
   baseCoords: [number, number] | null,
-  intervalMs = 3500,
+  intervalMs = 250,
 ): TwinScanState {
   const [active, setActive] = useState(false);
   const [totalScans, setTotalScans] = useState(0);
@@ -69,20 +86,43 @@ export function useTwinScan(
   const runScan = useCallback(async () => {
     if (!baseCoords) return;
 
-    // Advance the "vehicle" position
-    if (!movingBaseRef.current) movingBaseRef.current = baseCoords;
-    movingBaseRef.current = getMovingBase(movingBaseRef.current);
-    const [baseLat, baseLng] = movingBaseRef.current;
+    // Fast-jump to a brand new random road location every time
+    const [baseLat, baseLng] = getMovingBase();
 
+    // Apply final micro-jitter to the spot
     const lat = jitter(baseLat);
     const lng = jitter(baseLng);
     // Bias severity higher (5–10) so DBSCAN clusters confirm more often in demos
-    const severity_raw = parseFloat((Math.random() * 5 + 5).toFixed(1));    // 5.0 – 10.0
-    const speed_kmh    = parseFloat((Math.random() * 45 + 10).toFixed(1));  // 10 – 55 km/h
+    const severity_raw = parseFloat((Math.random() * 5 + 5).toFixed(1)); // 5.0 – 10.0
+    const speed_kmh = parseFloat((Math.random() * 45 + 10).toFixed(1)); // 10 – 55 km/h
 
     let result: ReportResponse;
     try {
-      result = await reportPothole({ lat, lng, severity_raw, speed_kmh, device_id: DEVICE_ID });
+      // Send 3 jittered reports in a single bulk HTTP request
+      const responses = await reportBulkPotholes([
+        {
+          lat: jitter(lat, 0.00001),
+          lng: jitter(lng, 0.00001),
+          severity_raw,
+          speed_kmh,
+          device_id: DEVICE_ID + "-A",
+        },
+        {
+          lat: jitter(lat, 0.00001),
+          lng: jitter(lng, 0.00001),
+          severity_raw,
+          speed_kmh,
+          device_id: DEVICE_ID + "-B",
+        },
+        {
+          lat: jitter(lat, 0.00001),
+          lng: jitter(lng, 0.00001),
+          severity_raw,
+          speed_kmh,
+          device_id: DEVICE_ID + "-C",
+        },
+      ]);
+      result = responses[responses.length - 1]; // The final one will contain the confirmed DBSCAN result
     } catch {
       return; // silent — don't break the scan loop on network error
     }
@@ -98,7 +138,7 @@ export function useTwinScan(
       timestamp: new Date(),
     };
 
-    setTotalScans((n)  => n + 1);
+    setTotalScans((n) => n + 1);
     if (result.pothole_confirmed) setConfirmedPotholes((n) => n + 1);
     setLastEvent(event);
     setLog((prev) => [event, ...prev].slice(0, 20));
@@ -117,9 +157,20 @@ export function useTwinScan(
     };
   }, [active, runScan, intervalMs]);
 
-  const start  = useCallback(() => setActive(true),            []);
-  const stop   = useCallback(() => { setActive(false); },      []);
-  const toggle = useCallback(() => setActive((v) => !v),       []);
+  const start = useCallback(() => setActive(true), []);
+  const stop = useCallback(() => {
+    setActive(false);
+  }, []);
+  const toggle = useCallback(() => setActive((v) => !v), []);
 
-  return { active, totalScans, confirmedPotholes, lastEvent, log, start, stop, toggle };
+  return {
+    active,
+    totalScans,
+    confirmedPotholes,
+    lastEvent,
+    log,
+    start,
+    stop,
+    toggle,
+  };
 }

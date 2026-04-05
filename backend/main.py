@@ -42,8 +42,13 @@ app = FastAPI(
 )
 
 
-# NOTE: reset_database() is available via POST /reset endpoint
-# Removed auto-reset on startup to preserve seeded data
+# removed auto-reset on startup to preserve seeded data
+# We'll uncomment it to clear the database perfectly every restart as requested
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Resetting the database to start fresh on this restart...")
+    reset_database()
+
 
 
 # CORS — allow all origins (required for frontend on different port)
@@ -95,14 +100,7 @@ async def list_potholes(
         return JSONResponse(content=[], status_code=200)
 
 
-@app.post("/report", response_model=ReportResponse)
-async def submit_report(report: RawReport):
-    """
-    Ingest a raw bump report from a device.
-    1. Save raw report to DB
-    2. Run DBSCAN validation
-    3. If confirmed → upsert pothole + send SMS alert if severe
-    """
+async def process_report(report: RawReport) -> ReportResponse:
     # 1. Insert raw report
     report_id = insert_raw_report(
         lat=report.lat,
@@ -155,6 +153,24 @@ async def submit_report(report: RawReport):
             severity=None,
             confidence=result["confidence"],
         )
+
+@app.post("/report", response_model=ReportResponse)
+async def submit_report(report: RawReport):
+    """
+    Ingest a raw bump report from a device.
+    """
+    return await process_report(report)
+
+@app.post("/report/bulk", response_model=list[ReportResponse])
+async def submit_bulk_reports(reports: list[RawReport]):
+    """
+    Ingest multiple raw bump reports in a single request.
+    Useful for twin scan and bulk uploads.
+    """
+    responses = []
+    for r in reports:
+        responses.append(await process_report(r))
+    return responses
 
 
 @app.post("/pothole/{pothole_id}/fix")
