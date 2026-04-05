@@ -41,7 +41,7 @@
     --glass-bg: 30 20% 12% / 0.7;
     --glass-border: 15 65% 60% / 0.15;
 
-    font-family: 'Moontime', 'Caveat', cursive;
+    font-family: "Inter", sans-serif;
   }
 
   .light {
@@ -85,19 +85,23 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Moontime', 'Caveat', cursive;
+    font-family: "Inter", sans-serif;
   }
 }
 
 @layer utilities {
   .font-mono-hud {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: "JetBrains Mono", monospace;
   }
   .font-display {
-    font-family: 'Moontime', 'Caveat', cursive;
+    font-family: "Playfair Display", serif;
   }
   .text-gradient-cyan {
-    background: linear-gradient(135deg, hsl(var(--cyan)), hsl(var(--electric-blue)));
+    background: linear-gradient(
+      135deg,
+      hsl(var(--cyan)),
+      hsl(var(--electric-blue))
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -128,23 +132,52 @@
   }
 
   @keyframes scanning {
-    0% { transform: translateY(-100%); opacity: 0; }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { transform: translateY(100vh); opacity: 0; }
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100vh);
+      opacity: 0;
+    }
   }
   @keyframes pulse-glow {
-    0%, 100% { opacity: 1; box-shadow: 0 0 4px currentColor; }
-    50% { opacity: 0.5; box-shadow: 0 0 12px currentColor; }
+    0%,
+    100% {
+      opacity: 1;
+      box-shadow: 0 0 4px currentColor;
+    }
+    50% {
+      opacity: 0.5;
+      box-shadow: 0 0 12px currentColor;
+    }
   }
   @keyframes ping-radar {
-    0% { transform: scale(1); opacity: 0.8; }
-    100% { transform: scale(2.5); opacity: 0; }
+    0% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(2.5);
+      opacity: 0;
+    }
   }
   @keyframes border-cycle {
-    0% { border-color: hsl(var(--cyan) / 0.4); }
-    50% { border-color: hsl(var(--electric-blue) / 0.4); }
-    100% { border-color: hsl(var(--cyan) / 0.4); }
+    0% {
+      border-color: hsl(var(--cyan) / 0.4);
+    }
+    50% {
+      border-color: hsl(var(--electric-blue) / 0.4);
+    }
+    100% {
+      border-color: hsl(var(--cyan) / 0.4);
+    }
   }
 
   .animate-scanning {
@@ -162,15 +195,30 @@
 
   /* User location dot pulse (blue GPS indicator) */
   @keyframes locationPulse {
-    0% { transform: scale(1); opacity: 0.6; }
-    70% { transform: scale(2.2); opacity: 0; }
-    100% { transform: scale(2.2); opacity: 0; }
+    0% {
+      transform: scale(1);
+      opacity: 0.6;
+    }
+    70% {
+      transform: scale(2.2);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(2.2);
+      opacity: 0;
+    }
   }
 
   /* Proximity alert slide-in from top */
   @keyframes slideDown {
-    from { transform: translateY(-100%); opacity: 0; }
-    to   { transform: translateY(0);    opacity: 1; }
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
   .animate-slide-down {
     animation: slideDown 0.4s ease forwards;
@@ -178,7 +226,7 @@
 
   /* Leaflet location tooltip */
   .location-tooltip {
-    background: rgba(37,99,235,0.9);
+    background: rgba(37, 99, 235, 0.9);
     border: none;
     color: white;
     font-size: 11px;
@@ -199,7 +247,7 @@
     font-size: 11px !important;
     padding: 4px 10px !important;
     border-radius: 8px !important;
-    font-family: 'JetBrains Mono', monospace !important;
+    font-family: "JetBrains Mono", monospace !important;
     font-weight: 600 !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
     letter-spacing: 0.5px;
@@ -243,7 +291,7 @@
     border-bottom: 1px solid rgba(14, 165, 233, 0.1);
   }
   .route-info-header span {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: "JetBrains Mono", monospace;
     font-size: 10px;
     font-weight: 700;
     color: #0ea5e9;
@@ -262,7 +310,7 @@
     gap: 2px;
   }
   .route-stat-value {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: "Space Grotesk", sans-serif;
     font-size: 15px;
     font-weight: 700;
     color: #0f172a;
@@ -271,7 +319,7 @@
     color: #22c55e !important;
   }
   .route-stat-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: "JetBrains Mono", monospace;
     font-size: 8px;
     color: #94a3b8;
     text-transform: uppercase;
@@ -281,7 +329,12 @@
   .route-stat-divider {
     width: 1px;
     height: 28px;
-    background: linear-gradient(to bottom, transparent, rgba(14, 165, 233, 0.3), transparent);
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      rgba(14, 165, 233, 0.3),
+      transparent
+    );
   }
 
   /* ─── Pothole marker hover glow ──────────────────────────── */
@@ -292,7 +345,7 @@
 
   /* ─── Map container polish ───────────────────────────────── */
   .leaflet-container {
-    font-family: 'Space Grotesk', sans-serif !important;
+    font-family: "Space Grotesk", sans-serif !important;
   }
   .leaflet-control-zoom a {
     background: rgba(255, 255, 255, 0.92) !important;
@@ -340,8 +393,14 @@
   animation: simRadarSweep 1.5s ease-out infinite;
 }
 @keyframes simRadarSweep {
-  0% { transform: scale(1); opacity: 0.8; }
-  100% { transform: scale(2.5); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
 }
 
 /* ── Radar scan pulse (emitted at scan points) ────────────────── */
@@ -352,7 +411,7 @@
 }
 .sim-radar-pulse::before,
 .sim-radar-pulse::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
@@ -362,19 +421,23 @@
   animation: simPulseExpand 1.8s ease-out forwards;
 }
 .sim-radar-pulse::before {
-  width: 20px; height: 20px;
+  width: 20px;
+  height: 20px;
 }
 .sim-radar-pulse::after {
-  width: 20px; height: 20px;
+  width: 20px;
+  height: 20px;
   animation-delay: 0.3s;
 }
 @keyframes simPulseExpand {
   0% {
-    width: 20px; height: 20px;
+    width: 20px;
+    height: 20px;
     opacity: 0.8;
   }
   100% {
-    width: 160px; height: 160px;
+    width: 160px;
+    height: 160px;
     opacity: 0;
   }
 }
@@ -384,8 +447,14 @@
   animation: simDetectionFlash 0.6s ease-out;
 }
 @keyframes simDetectionFlash {
-  0% { stroke-width: 6; opacity: 1; }
-  100% { stroke-width: 2; opacity: 0.8; }
+  0% {
+    stroke-width: 6;
+    opacity: 1;
+  }
+  100% {
+    stroke-width: 2;
+    opacity: 0.8;
+  }
 }
 
 /* ── Detection alert badge (floats above pothole) ─────────────── */
@@ -397,7 +466,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 10px;
   font-weight: 700;
   padding: 4px 10px;
@@ -439,7 +508,12 @@
   left: 0;
   right: 0;
   z-index: 2000;
-  background: linear-gradient(to bottom, rgba(15, 23, 42, 0.92) 0%, rgba(15, 23, 42, 0.85) 80%, transparent 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(15, 23, 42, 0.92) 0%,
+    rgba(15, 23, 42, 0.85) 80%,
+    transparent 100%
+  );
   backdrop-filter: blur(16px);
   padding: 12px 16px 20px;
   display: flex;
@@ -463,7 +537,7 @@
   animation: pulse-glow 1.5s ease-in-out infinite;
 }
 .sim-hud-live-text {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 10px;
   font-weight: 700;
   color: #22c55e;
@@ -487,14 +561,14 @@
   color: rgba(255, 255, 255, 0.5);
 }
 .sim-hud-stat-value {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   font-size: 18px;
   font-weight: 700;
   color: white;
   line-height: 1;
 }
 .sim-hud-stat-unit {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 9px;
   color: rgba(255, 255, 255, 0.4);
   text-transform: uppercase;
@@ -518,7 +592,7 @@
   background: rgba(239, 68, 68, 0.15);
   color: #fca5a5;
   cursor: pointer;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -573,7 +647,7 @@
   animation: pulse-glow 1s ease-in-out infinite;
 }
 .sim-detection-feed-header span {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 9px;
   font-weight: 700;
   color: #ef4444;
@@ -598,20 +672,20 @@
 }
 .sim-detection-item-label {
   display: block;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 10px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.85);
 }
 .sim-detection-item-meta {
   display: block;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 8px;
   color: rgba(255, 255, 255, 0.3);
   margin-top: 1px;
 }
 .sim-detection-item-sev {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   font-size: 12px;
   font-weight: 700;
   padding: 2px 8px;
@@ -650,7 +724,7 @@
 }
 .sim-pothole-tag {
   display: inline-block;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 9px;
   font-weight: 700;
   padding: 2px 8px;
@@ -660,7 +734,7 @@
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
 }
 .sim-pothole-ward {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 7px;
   color: #6b7280;
   text-transform: uppercase;
