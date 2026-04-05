@@ -28,7 +28,6 @@ When anomalous bump patterns are detected, reports are sent to the cloud and val
 | 🎬 **Demo Mode** | Auto-generates reports across 8 Bengaluru hotspots to display system resilience. |
 | ⚠️ **Ward Breakdown** | Sidebar showing ward-by-ward severity analysis with fly-to navigation. |
 | 💰 **Damage Estimator** | Actionable financial metrics showing estimated vehicle damage from potholes. |
-| 🚨 **Twilio SMS Alerts** | Automated alerts sent to municipality via Twilio when severity ≥ 7.0 (configurable). |
 | ✅ **Mark as Fixed** | One-click issue resolution directly from the map popup. |
 
 ---
