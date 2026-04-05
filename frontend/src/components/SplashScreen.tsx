@@ -281,28 +281,44 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
               ROADPULSE TWIN
             </motion.h1>
 
-            {/* Dynamic Status Text */}
-            <motion.div className="mt-8 flex flex-col items-center" initial={{ opacity: 0 }} animate={{ opacity: scanned ? 0 : 1 }} transition={{ delay: 3 }}>
-              <div
-                className="px-4 py-1 border border-[#FB5607] text-[#FB5607] text-xs uppercase font-bold"
-                style={{ backgroundColor: 'rgba(251,86,7,0.2)', letterSpacing: '0.3em' }}
-              >
-                Warning: Pothole Anomalies Detected
-              </div>
-            </motion.div>
-
-            <AnimatePresence>
-              {scanned && (
-                <motion.div className="mt-8 flex flex-col items-center absolute w-full" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                  <div
-                    className="px-4 py-1 border border-[#FF9F1C] text-[#FF9F1C] text-sm uppercase font-bold"
-                    style={{ backgroundColor: 'rgba(255,159,28,0.2)', letterSpacing: '0.3em' }}
+            {/* Dynamic Status Text — single slot, swap in place */}
+            <div className="mt-8 relative flex items-center justify-center" style={{ minHeight: 32 }}>
+              <AnimatePresence mode="wait">
+                {!scanned ? (
+                  <motion.div
+                    key="warning"
+                    className="flex flex-col items-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, y: -8, transition: { duration: 0.3 } }}
+                    transition={{ delay: 3, duration: 0.5 }}
                   >
-                    Twin Sync Complete
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    <div
+                      className="px-4 py-1 border border-[#FB5607] text-[#FB5607] text-xs uppercase font-bold"
+                      style={{ backgroundColor: 'rgba(251,86,7,0.2)', letterSpacing: '0.3em' }}
+                    >
+                      Warning: Pothole Anomalies Detected
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="synced"
+                    className="flex flex-col items-center"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <div
+                      className="px-4 py-1 border border-[#FF9F1C] text-[#FF9F1C] text-sm uppercase font-bold"
+                      style={{ backgroundColor: 'rgba(255,159,28,0.2)', letterSpacing: '0.3em' }}
+                    >
+                      Twin Sync Complete
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </motion.div>
