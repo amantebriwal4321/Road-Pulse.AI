@@ -1,4 +1,5 @@
-# 🛣️ RoadPulse — Crowdsourced Road Health Digital Twin
+with open("README.md", "w") as f:
+    f.write("""# 🛣️ RoadPulse — Crowdsourced Road Health Digital Twin
 
 > Real-time pothole detection and urban digital twin for Bengaluru.
 > Built for the Smart Infrastructure & Urban Digital Twins hackathon.
@@ -170,3 +171,4 @@ By utilizing density-based spatial clustering of applications with noise (DBSCAN
 <p align="center">
 Built by <b>Aman Tebriwal</b> to revolutionize urban asset management. Let's make our roads safer, smarter, and driven by data! 🌍
 </p>
+""")
