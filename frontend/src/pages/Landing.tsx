@@ -3,11 +3,12 @@ import { GlassCard } from "@/components/GlassCard";
 import { HUDLabel } from "@/components/HUDLabel";
 import { NeonButton } from "@/components/NeonButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { SplashScreen } from "@/components/SplashScreen";
 import { usePotholes } from "@/hooks/usePotholes";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { User, Building2, Activity } from "lucide-react";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 
 const CountUp = ({ target, suffix = '' }: { target: number; suffix?: string }) => {
   const [val, setVal] = useState(0);
@@ -30,6 +31,16 @@ const Landing = () => {
   const navigate = useNavigate();
   const { potholes } = usePotholes(10000);
 
+  // Show splash once per session
+  const [showSplash, setShowSplash] = useState(() => {
+    return !sessionStorage.getItem('roadpulse_splash_seen');
+  });
+
+  const handleSplashComplete = useCallback(() => {
+    sessionStorage.setItem('roadpulse_splash_seen', '1');
+    setShowSplash(false);
+  }, []);
+
   // Live stats
   const liveStats = useMemo(() => {
     const totalReports = potholes.reduce((s, p) => s + p.report_count, 0);
@@ -42,7 +53,13 @@ const Landing = () => {
   }, [potholes]);
 
   return (
-    <div className="min-h-screen bg-metaverse-grid relative overflow-hidden">
+    <>
+      {/* Splash screen overlay */}
+      <AnimatePresence>
+        {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
+      </AnimatePresence>
+
+      <div className="min-h-screen bg-metaverse-grid relative overflow-hidden">
       <MetaverseGrid />
 
       {/* Header */}
@@ -147,6 +164,7 @@ const Landing = () => {
         </motion.div>
       </div>
     </div>
+    </>
   );
 };
 
