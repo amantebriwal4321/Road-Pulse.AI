@@ -12,6 +12,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+
 from models import RawReport, PotholeResponse, ReportResponse
 from db_client import (
     get_all_potholes,
@@ -40,7 +41,22 @@ app = FastAPI(
     description="Crowdsourced pothole detection & urban digital twin",
     version="1.0.0",
 )
+origins = [
+    "http://localhost:3000",        # Local development (React/Vue/etc.)
+    "https://vercel.app", # Your production frontend URL
+]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,           # List of allowed origins
+    allow_credentials=True,          # Allow cookies and auth headers
+    allow_methods=["*"],             # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],             # Allow all headers
+)
+
+@app.get("/")
+async def root():
+    return {"message": "CORS is configured!"}
 
 # Reset on startup to clear old potholes
 @app.on_event("startup")
