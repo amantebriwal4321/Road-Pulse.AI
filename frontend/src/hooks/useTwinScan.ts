@@ -92,8 +92,8 @@ export function useTwinScan(
     // Apply final micro-jitter to the spot
     const lat = jitter(baseLat);
     const lng = jitter(baseLng);
-    // Bias severity higher (5–10) so DBSCAN clusters confirm more often in demos
-    const severity_raw = parseFloat((Math.random() * 5 + 5).toFixed(1)); // 5.0 – 10.0
+    // Generate a random severity across the full range (2.0 to 10.0) so green dots (low severity) also appear
+    const severity_raw = parseFloat((Math.random() * 8 + 2).toFixed(1)); // 2.0 – 10.0
     const speed_kmh = parseFloat((Math.random() * 45 + 10).toFixed(1)); // 10 – 55 km/h
 
     let result: ReportResponse;

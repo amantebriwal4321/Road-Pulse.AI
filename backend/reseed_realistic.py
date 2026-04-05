@@ -54,7 +54,7 @@ def main():
             lat = scatter(base_lat)
             lng = scatter(base_lng)
             severity = round(random.choice([
-                random.uniform(3.0, 5.0),   # low
+                random.uniform(2.0, 4.5),   # low (green dots)
                 random.uniform(5.0, 7.5),   # medium
                 random.uniform(7.5, 9.8),   # high
             ]), 1)
