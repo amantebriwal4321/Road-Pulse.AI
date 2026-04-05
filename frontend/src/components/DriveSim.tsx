@@ -23,6 +23,12 @@ export interface SimDetection {
   severity: number;
   detectedAt: number;
   ward: string;
+  /** DBSCAN confirmation state */
+  dbscanState: 'pending' | 'clustering' | 'confirmed';
+  /** How many vehicle reports collected so far (simulated) */
+  vehicleReports: number;
+  /** How many reports needed for DBSCAN to confirm (always 3) */
+  reportsNeeded: number;
 }
 
 export interface DriveSimState {
@@ -54,7 +60,14 @@ const BENGALURU_WAYPOINTS: [number, number][] = [
 
 /* ── Pre-seeded pothole locations along the route ─────────────── */
 /* These simulate the detections the car "discovers" as it drives. */
-const SIMULATED_POTHOLES: Omit<SimDetection, "detectedAt">[] = [
+interface SimPothole {
+  id: string;
+  lat: number;
+  lng: number;
+  severity: number;
+  ward: string;
+}
+const SIMULATED_POTHOLES: SimPothole[] = [
   // Near Chamrajpet
   { id: "sim-1", lat: 12.9485, lng: 77.5620, severity: 7.2, ward: "Chamrajpet" },
   { id: "sim-2", lat: 12.9500, lng: 77.5645, severity: 5.8, ward: "Chamrajpet" },
@@ -234,13 +247,16 @@ export function DriveSim({
       });
 
       // ── Animation constants ────────────────────────────────────
-      const LOOP_DURATION = 55_000;  // ~55 seconds for the full loop
+      const LOOP_DURATION = 35_000;  // ~35 seconds for the full loop (fast demo)
       const SCAN_RADIUS = 250;       // metres — potholes appear/disappear within this
       const DETECT_RADIUS = 80;      // metres — "confirmed detection" zone
+      const DBSCAN_CONFIRM_DELAY = 1800; // ms — time to simulate 3 vehicle reports clustering
       let startTime: number | null = null;
       let scanCount = 0;
       let lastScanIdx = -1;
       const allDetections: SimDetection[] = [];
+      /** Track pending DBSCAN confirmations */
+      const pendingDbscan: Map<string, { startedAt: number; detection: SimDetection }> = new Map();
 
       const animate = (ts: number) => {
         if (cancelled) return;
@@ -311,35 +327,30 @@ export function DriveSim({
               simMarkersRef.current.set(sp.id, { marker, label });
             }
 
-            // Check direct detection (close pass)
+            // Check direct detection (close pass) — DBSCAN multi-vehicle flow
             if (dist <= DETECT_RADIUS) {
               const alreadyDetected = allDetections.find(d => d.id === sp.id);
-              if (!alreadyDetected) {
-                allDetections.push({
+              const alreadyPending = pendingDbscan.has(sp.id);
+
+              if (!alreadyDetected && !alreadyPending) {
+                // Phase 1: Start DBSCAN pending — show scanning badge
+                const det: SimDetection = {
                   ...sp,
                   detectedAt: Date.now(),
-                });
+                  dbscanState: 'pending',
+                  vehicleReports: 1,
+                  reportsNeeded: 3,
+                };
+                pendingDbscan.set(sp.id, { startedAt: ts, detection: det });
+                allDetections.push(det);
 
-                // Flash pulse on detection
-                const pulseIcon = L.divIcon({
-                  className: "",
-                  html: `<div class="sim-radar-pulse"></div>`,
-                  iconSize: [0, 0],
-                  iconAnchor: [0, 0],
-                });
-                const pulse = L.marker([sp.lat, sp.lng], {
-                  icon: pulseIcon,
-                  interactive: false,
-                }).addTo(group);
-                setTimeout(() => { if (group.hasLayer(pulse)) group.removeLayer(pulse); }, 2000);
-
-                // Detection badge
-                const badgeIcon = L.divIcon({
+                // Show "scanning" badge
+                const scanBadge = L.divIcon({
                   className: "",
                   html: `
                     <div class="sim-detection-alert">
-                      <span class="sim-detection-badge ${sp.severity >= 7 ? 'high' : 'medium'}">
-                        ⚠ DETECTED · Sev ${sp.severity.toFixed(1)}
+                      <span class="sim-detection-badge scanning">
+                        ◎ DBSCAN · 1/${3} vehicles
                       </span>
                     </div>
                   `,
@@ -347,11 +358,67 @@ export function DriveSim({
                   iconAnchor: [0, 40],
                 });
                 const badge = L.marker([sp.lat, sp.lng], {
-                  icon: badgeIcon,
+                  icon: scanBadge,
                   zIndexOffset: 1600,
                   interactive: false,
                 }).addTo(group);
-                setTimeout(() => { if (group.hasLayer(badge)) group.removeLayer(badge); }, 3500);
+
+                // Phase 2: After ~900ms, show 2/3 vehicles
+                setTimeout(() => {
+                  if (!group.hasLayer(badge)) return;
+                  const idx = allDetections.findIndex(d => d.id === sp.id);
+                  if (idx >= 0) {
+                    allDetections[idx] = { ...allDetections[idx], vehicleReports: 2, dbscanState: 'clustering' };
+                  }
+                  const el = (badge as any)._icon;
+                  if (el) {
+                    el.querySelector('.sim-detection-badge').innerHTML = '◎ DBSCAN · 2/3 vehicles';
+                    el.querySelector('.sim-detection-badge').className = 'sim-detection-badge clustering';
+                  }
+                }, 900);
+
+                // Phase 3: After DBSCAN_CONFIRM_DELAY, confirm
+                setTimeout(() => {
+                  if (group.hasLayer(badge)) group.removeLayer(badge);
+                  const idx = allDetections.findIndex(d => d.id === sp.id);
+                  if (idx >= 0) {
+                    allDetections[idx] = { ...allDetections[idx], vehicleReports: 3, dbscanState: 'confirmed' };
+                  }
+                  pendingDbscan.delete(sp.id);
+
+                  // Flash pulse on confirmed detection
+                  const pulseIcon = L.divIcon({
+                    className: "",
+                    html: `<div class="sim-radar-pulse"></div>`,
+                    iconSize: [0, 0],
+                    iconAnchor: [0, 0],
+                  });
+                  const pulse = L.marker([sp.lat, sp.lng], {
+                    icon: pulseIcon,
+                    interactive: false,
+                  }).addTo(group);
+                  setTimeout(() => { if (group.hasLayer(pulse)) group.removeLayer(pulse); }, 2000);
+
+                  // Confirmed badge
+                  const confirmedBadge = L.divIcon({
+                    className: "",
+                    html: `
+                      <div class="sim-detection-alert">
+                        <span class="sim-detection-badge ${sp.severity >= 7 ? 'high' : 'medium'}">
+                          ✓ DBSCAN CONFIRMED · Sev ${sp.severity.toFixed(1)}
+                        </span>
+                      </div>
+                    `,
+                    iconSize: [0, 0],
+                    iconAnchor: [0, 40],
+                  });
+                  const cBadge = L.marker([sp.lat, sp.lng], {
+                    icon: confirmedBadge,
+                    zIndexOffset: 1600,
+                    interactive: false,
+                  }).addTo(group);
+                  setTimeout(() => { if (group.hasLayer(cBadge)) group.removeLayer(cBadge); }, 3500);
+                }, DBSCAN_CONFIRM_DELAY);
               }
             }
           } else {

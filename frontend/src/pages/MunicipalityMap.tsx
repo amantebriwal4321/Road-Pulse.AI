@@ -268,7 +268,7 @@ const MunicipalityMap = () => {
           {/* Main Map — LIVE Leaflet */}
           <div className="flex-1 p-4">
             <div className="relative h-[60vh] lg:h-[calc(100vh-100px)] rounded-lg border border-border-glow overflow-hidden">
-              <LiveMap potholes={potholes} height="100%" />
+              <LiveMap potholes={potholes} height="100%" showMarkFixed={true} />
               <div className="absolute top-3 left-3 z-[1000]">
                 <HUDLabel className="border-electric-blue/30 text-electric-blue">
                   DIGITAL TWIN · BENGALURU · {potholes.length} POTHOLES

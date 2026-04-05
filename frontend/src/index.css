@@ -483,6 +483,29 @@
   background: rgba(245, 158, 11, 0.95);
   color: white;
 }
+.sim-detection-badge.scanning {
+  background: rgba(100, 116, 139, 0.92);
+  color: white;
+  animation: simBadgeAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+    dbscanPulse 1.2s ease-in-out infinite;
+}
+.sim-detection-badge.clustering {
+  background: rgba(59, 130, 246, 0.92);
+  color: white;
+  animation: simBadgeAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+    dbscanPulse 0.8s ease-in-out infinite;
+}
+@keyframes dbscanPulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  }
+  50% {
+    opacity: 0.75;
+    box-shadow: 0 2px 20px rgba(59, 130, 246, 0.4);
+  }
+}
 @keyframes simBadgeAppear {
   0% {
     opacity: 0;
@@ -652,6 +675,17 @@
   font-weight: 700;
   color: #ef4444;
   letter-spacing: 1px;
+}
+.sim-dbscan-explainer {
+  padding: 6px 12px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 8px;
+  font-weight: 600;
+  color: #67e8f9;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+  border-bottom: 1px solid rgba(103, 232, 249, 0.1);
+  background: rgba(103, 232, 249, 0.05);
 }
 
 /* Detection item */

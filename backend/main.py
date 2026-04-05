@@ -42,12 +42,10 @@ app = FastAPI(
 )
 
 
-# removed auto-reset on startup to preserve seeded data
-# We'll uncomment it to clear the database perfectly every restart as requested
+# Don't reset on startup — seeded data must persist across restarts
 @app.on_event("startup")
 async def startup_event():
-    logger.info("Resetting the database to start fresh on this restart...")
-    reset_database()
+    logger.info("RoadPulse API started — seeded data preserved")
 
 
 

@@ -75,6 +75,8 @@ interface LiveMapProps {
   flyToZoom?: number;
   onMapRef?: (map: LeafletMap) => void;
   showPopups?: boolean;
+  /** Show "Mark as Fixed" button in popups (municipality only) */
+  showMarkFixed?: boolean;
   tileMode?: "light" | "dark";
   userLocation?: [number, number] | null;
   routePath?: [number, number][] | null;
@@ -94,6 +96,7 @@ export function LiveMap({
   flyToZoom = 15,
   onMapRef,
   showPopups = true,
+  showMarkFixed = false,
   tileMode,
   userLocation = null,
   routePath = null,
@@ -201,7 +204,7 @@ export function LiveMap({
                     </span>
                   </div>
                 </div>
-                {p.status === "open" && (
+                {showMarkFixed && p.status === "open" && (
                   <button
                     onClick={() => markFixed(p.id)}
                     style={{

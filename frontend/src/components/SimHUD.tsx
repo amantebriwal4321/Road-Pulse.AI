@@ -27,6 +27,7 @@ function sevColor(s: number): string {
 export function SimHUD({ simState, onStop }: SimHUDProps) {
   const { speed, distanceKm, scanCount, detections, progress, active } =
     simState;
+  const confirmedCount = detections.filter(d => d.dbscanState === 'confirmed').length;
 
   if (!active) return null;
 
@@ -82,16 +83,16 @@ export function SimHUD({ simState, onStop }: SimHUDProps) {
             <ShieldAlert
               size={14}
               className="sim-hud-stat-icon"
-              style={{ color: detections.length > 0 ? "#ef4444" : undefined }}
+              style={{ color: confirmedCount > 0 ? "#ef4444" : undefined }}
             />
             <div>
               <span
                 className="sim-hud-stat-value"
-                style={{ color: detections.length > 0 ? "#ef4444" : undefined }}
+                style={{ color: confirmedCount > 0 ? "#ef4444" : undefined }}
               >
-                {detections.length}
+                {confirmedCount}
               </span>
-              <span className="sim-hud-stat-unit">found</span>
+              <span className="sim-hud-stat-unit">confirmed</span>
             </div>
           </div>
         </div>
@@ -124,6 +125,10 @@ export function SimHUD({ simState, onStop }: SimHUDProps) {
               <Zap size={12} className="sim-detection-feed-icon" />
               <span>LIVE DETECTIONS</span>
             </div>
+            <div className="sim-dbscan-explainer">
+              DBSCAN Clustering · eps=5m · min_samples=3<br />
+              <span style={{ opacity: 0.6 }}>3 vehicle reports → spatial cluster → confirmed pothole</span>
+            </div>
             {recentDetections.map((det, i) => (
               <DetectionItem key={det.id} det={det} isLatest={i === 0} />
             ))}
@@ -142,6 +147,8 @@ function DetectionItem({
   isLatest: boolean;
 }) {
   const isHigh = det.severity >= 7;
+  const isConfirmed = det.dbscanState === 'confirmed';
+  const isPending = det.dbscanState === 'pending' || det.dbscanState === 'clustering';
 
   return (
     <motion.div
@@ -151,26 +158,31 @@ function DetectionItem({
     >
       <AlertTriangle
         size={12}
-        style={{ color: sevColor(det.severity), flexShrink: 0 }}
+        style={{ color: isConfirmed ? sevColor(det.severity) : '#94a3b8', flexShrink: 0 }}
       />
       <div className="sim-detection-item-content">
         <span className="sim-detection-item-label">
-          {isHigh ? "HIGH" : "MEDIUM"} · Sev {det.severity.toFixed(1)}
+          {isConfirmed
+            ? `${isHigh ? "HIGH" : "MEDIUM"} · Sev ${det.severity.toFixed(1)}`
+            : `DBSCAN ${det.vehicleReports}/${det.reportsNeeded} vehicles...`
+          }
         </span>
         <span className="sim-detection-item-meta">
-          {det.ward}
+          {isConfirmed ? det.ward : `Clustering · ${det.ward}`}
         </span>
       </div>
       <span
         className="sim-detection-item-sev"
         style={{
-          background: isHigh
-            ? "rgba(239,68,68,0.15)"
-            : "rgba(245,158,11,0.15)",
-          color: sevColor(det.severity),
+          background: isPending
+            ? "rgba(148,163,184,0.15)"
+            : isHigh
+              ? "rgba(239,68,68,0.15)"
+              : "rgba(245,158,11,0.15)",
+          color: isPending ? '#94a3b8' : sevColor(det.severity),
         }}
       >
-        {det.severity.toFixed(1)}
+        {isConfirmed ? det.severity.toFixed(1) : `${det.vehicleReports}/${det.reportsNeeded}`}
       </span>
     </motion.div>
   );
