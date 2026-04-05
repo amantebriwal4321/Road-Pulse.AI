@@ -371,7 +371,6 @@ const CitizenHub = () => {
         <LiveMap
           potholes={potholes}
           height="100%"
-          tileMode={d ? "dark" : "light"}
           userLocation={autoDetect ? effectiveCoords : null}
           center={effectiveCoords ?? [12.9716, 77.5946]}
           zoom={13}

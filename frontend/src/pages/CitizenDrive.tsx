@@ -203,7 +203,6 @@ const CitizenDrive = () => {
           <LiveMap
             potholes={potholes}
             height="100%"
-            tileMode={d ? "dark" : "light"}
             center={[12.9352, 77.5551]}
             zoom={13}
             showPopups={true}

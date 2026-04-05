@@ -12,6 +12,7 @@ import type { PotholeData } from "@/services/api";
 import { markFixed } from "@/services/api";
 import { UserLocationMarker } from "@/components/UserLocationMarker";
 import { AnimatedRoute } from "@/components/AnimatedRoute";
+import { useThemeStore } from "@/stores/themeStore";
 import "leaflet/dist/leaflet.css";
 
 /** ─── Severity helpers ─────────────────────────────────────── */
@@ -93,14 +94,16 @@ export function LiveMap({
   flyToZoom = 15,
   onMapRef,
   showPopups = true,
-  tileMode = "light",
+  tileMode,
   userLocation = null,
   routePath = null,
   routeDistanceKm,
   routePotholesCount,
   children,
 }: LiveMapProps) {
-  const tile = TILES[tileMode];
+  const globalTheme = useThemeStore((state) => state.theme);
+  const resolvedMode = tileMode || (globalTheme === "dark" ? "dark" : "light");
+  const tile = TILES[resolvedMode];
 
   return (
     <MapContainer
@@ -110,7 +113,12 @@ export function LiveMap({
       zoomControl={false}
     >
       <ZoomControl position="bottomright" />
-      <TileLayer url={tile.url} attribution={tile.attribution} maxZoom={19} />
+      <TileLayer
+        key={tile.url}
+        url={tile.url}
+        attribution={tile.attribution}
+        maxZoom={19}
+      />
 
       {onMapRef ? <MapRefSetter onMapRef={onMapRef} /> : null}
       {flyTo ? <FlyTo center={flyTo} zoom={flyToZoom} /> : null}
