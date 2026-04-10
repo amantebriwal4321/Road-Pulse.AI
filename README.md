@@ -2,6 +2,16 @@
 
 > Real-time pothole detection and urban digital twin for Bengaluru.
 > Built for the Smart Infrastructure & Urban Digital Twins hackathon.
+run by
+cd backend
+python -m pip install -r requirements.txt
+python -m uvicorn main:app --reload --port 8000
+
+cd frontend
+npm install #not important if downloaded
+npm run dev
+
+
 
 ![RoadPulse Dashboard](https://img.shields.io/badge/Status-Live_Demo-brightgreen)
 ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?logo=fastapi)
